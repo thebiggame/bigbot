@@ -1,24 +1,15 @@
-A simple discord bot written in [Go](https://golang.org/). It assigns a role to a user when they add a reaction to a specific message.
+A simple discord bot written in [Go](https://golang.org/). It assigns a role to a user when they send a specific message.
 
 <img src="screenshots/1.jpg" width="300"> <img src="screenshots/2.jpg" width="300">
 
 ## Install
 
-### Option 1: From latest source (requires go installation)
 [Install Go](https://golang.org/doc/install#install)
 ```sh
-go get github.com/Adam-Clrk/rolebot
-go install github.com/Adam-Clrk/rolebot
+go get github.com/luaduck/rolebot
+go install github.com/luaduck/rolebot
 ```
 (Installs to `~/go/bin/`)
-
-### Option 2: Download binary (easier - go installation not required)
-```sh
-wget "https://github.com/Adam-Clrk/rolebot/releases/download/v1.0/rolebot"
-chmod +x rolebot
-```
-(Downloads to current directory)
-run with `./rolebot`
 
 ## Running
 You will need a bot token from the [Discord developers site](https://discordapp.com/developers/applications/me)
@@ -27,12 +18,10 @@ Usage:
 ```
 ~$ rolebot
 Usage of rolebot:
-  -c name
+  -chan name
     	Channel name to use (default "roles")
-  -e string
-    	Emoji to use as reaction button (default "🍆")
-  -o id
-    	Owner user id (only this owner ID and server owner can use register command)
+  -char string
+        Command character to previx all commands with (default "!")
   -t token
     	Bot token (required)
   -v	Verbose logging
@@ -54,12 +43,10 @@ paste the link into a web browser to add the bot to your discord server (you wil
 ## Command Usage
 
 ### Register
-Usage: `register @role [message]`
+Usage: `!jointeam (team name)`
 
-Command only works in a channel named `roles` (or other supplied with `-c`), and can only be used by server owner or other user supplied with `-o`
+Command only works in a channel named `roles` (or other supplied with `-c`). It can be used by anyone.
+Example:
 
-Examples:
+`jointeam iBUYJEFFS`
 
-`register @csgo access to the csgo text chat`
-
-`register @bluerole`

@@ -11,21 +11,21 @@ import (
   "syscall"
 
   "github.com/bwmarrin/discordgo"
+  "errors"
+  "fmt"
 )
 
 var (
   token string
-  ownerID = "0"
   activeChannel = "roles"
   verbose = false
-  emoji = "🍆"
+  command_char = "!"
 )
 
 func init() {
-  flag.StringVar(&token, "t", "", "Bot `token` (required)")
-  flag.StringVar(&ownerID, "o", "", "Owner user `id` (only this owner ID and server owner can use the register command)")
-  flag.StringVar(&activeChannel, "c", "roles", "Channel `name` to use")
-  flag.StringVar(&emoji, "e", "🍆", "Emoji to use as reaction button")
+  flag.StringVar(&token, "token", "", "Bot `token` (required)")
+  flag.StringVar(&activeChannel, "chan", "roles", "Channel `name` to use")
+  flag.StringVar(&command_char, "char", "!", "Command character to prefix all comamnds with")
   flag.BoolVar(&verbose, "v", false, "Verbose logging")
   flag.Parse()
   if token == "" {
@@ -49,8 +49,6 @@ func main()  {
     return
   }
   discord.AddHandler(messageCreate)
-  discord.AddHandler(messageReactionAdd)
-  discord.AddHandler(messageReactionRemove)
   // discord.AddHandler(ready)
 
   err = discord.Open()
@@ -85,45 +83,27 @@ func main()  {
   discord.Close()
 }
 
-func reactionUpdate(s *discordgo.Session, MessageID *string, ChannelID *string) (bool, string, string)  {
-  channel, _ := s.Channel(*ChannelID)
-  if channel.Name != "roles" {
-    return false, "", ""
+func createOrReturnRole(s *discordgo.Session, guild string, rname string) (v *discordgo.Role, err error) {
+  roles, err := s.GuildRoles(guild)
+  // I am way too lazy for regex here
+  if !strings.HasPrefix(rname, "Team:") || !strings.HasPrefix(rname, "team:") || !strings.HasPrefix(rname, "Team") || !strings.HasPrefix(rname, "team") {
+    rname = fmt.Sprintln("Team: ", rname)
   }
-  message, _ := s.ChannelMessage(*ChannelID, *MessageID)
-  if message.Author.ID != s.State.User.ID {
-    return false, "", ""
+  rname = strings.Replace(rname, "\n", "", -1)
+  if err == nil {
+    for _, v := range roles {
+      if v.Name == rname {
+        return v, nil
+      }
+    }
+    // couldn't find the role in our list, create it
+    role, err := s.GuildRoleCreate(guild)
+    if err == nil {
+      // Patch the role
+      return s.GuildRoleEdit(guild, role.ID, rname, 65280, false, 0, true)
+    }
   }
-
-  getRole := regexp.MustCompile(`<@&([0-9]+)>`)
-  roleID := getRole.FindStringSubmatch(message.Content)[1]
-
-  return true, channel.GuildID, roleID
-}
-
-func messageReactionAdd(s *discordgo.Session, r *discordgo.MessageReactionAdd)  {
-  shouldRun, GuildID, roleID := reactionUpdate(s, &r.MessageID, &r.ChannelID)
-  if !shouldRun || r.UserID == s.State.User.ID {
-    return
-  }
-  debug("Giving ", roleID, " to ", r.UserID)
-  err := s.GuildMemberRoleAdd(GuildID, r.UserID, roleID)
-  if err != nil {
-    log.Print(err)
-    debug("try moving the bot's role up the role list")
-  }
-}
-
-func messageReactionRemove(s *discordgo.Session, r *discordgo.MessageReactionRemove)  {
-  shouldRun, GuildID, roleID := reactionUpdate(s, &r.MessageID, &r.ChannelID)
-  if !shouldRun || r.UserID == s.State.User.ID {
-    return
-  }
-  debug("Removing ", roleID, " from ", r.UserID)
-  err := s.GuildMemberRoleRemove(GuildID, r.UserID, roleID)
-  if err != nil {
-    log.Print(err)
-  }
+  return nil, errors.New("there was a problem creating the target role")
 }
 
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
@@ -136,40 +116,36 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
     log.Print(err)
     return
   }
-  guild, err := s.Guild(channel.GuildID)
-  if err != nil {
-    log.Print("Error getting guild:")
-    log.Print(err)
-    return
-  }
-  if m.Author.ID != ownerID && m.Author.ID != guild.OwnerID {
-    return
-  }
-  if strings.HasPrefix(m.Content, "register") {
-    if channel.Name != activeChannel {
-      debug("register command only works in channels with name: ", activeChannel)
-      return
-    }
-    getRole := regexp.MustCompile(`<@&([0-9]+)> ?(.*)?`)
-    regexout := getRole.FindAllStringSubmatch(m.Content, -1)
-    if regexout != nil {
-      roleID := regexout[0][1]
-      description := ""
-      text := []string{}
-      if regexout[0][2] != "" {
-        description = regexout[0][2]
-        log.Print("registering ", roleID, ": ", description)
-        text = []string{"<@&", roleID, ">\n", description}
-      } else {
-        log.Print("registering ", roleID, ": ", description)
-        text = []string{"<@&", roleID, ">\n", description}
-      }
 
-      newm, err := s.ChannelMessageSend(m.ChannelID, strings.Join(text, ""))
-      if err == nil {
-        s.MessageReactionAdd(newm.ChannelID, newm.ID, emoji)
-        s.ChannelMessageDelete(channel.ID, m.ID)
+  if strings.HasPrefix(m.Content, "!") {
+    // it's a command character chat message
+    command := m.Content[1:]
+    if strings.HasPrefix(command, "jointeam") {
+      if channel.Name != activeChannel {
+        debug("jointeam command only works in channels with name: ", activeChannel)
+        return
       }
-    }
+      getRole := regexp.MustCompile(`(?:[\w]+) ?(.+)`)
+      regexout := getRole.FindAllStringSubmatch(m.Content, -1)
+      if regexout != nil {
+        roleID := regexout[0][1]
+        text := []string{}
+        if regexout[0][1] != "" {
+          log.Print("registering ", roleID)
+          text = []string{"Joining team: `", roleID, "`\n"}
+        } else {
+          log.Print("registering ", roleID, ": ")
+          text = []string{"Joining team: `", roleID, "`\n"}
+        }
+
+        _, err := s.ChannelMessageSend(m.ChannelID, strings.Join(text, ""))
+        if err == nil {
+          role, err := createOrReturnRole(s, channel.GuildID, roleID)
+          if err == nil {
+            s.GuildMemberRoleAdd(channel.GuildID, m.Author.ID, role.ID)
+          }
+        }
+        }
+      }
   }
 }
