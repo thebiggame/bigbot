@@ -15,7 +15,7 @@ FROM scratch
 WORKDIR /app
 
 COPY --from=build /go/src/github.com/luaduck/rolebot/main .
-COPY --from=build /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-bundle.crt
+COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 
 EXPOSE 53
 
