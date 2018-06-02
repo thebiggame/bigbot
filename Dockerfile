@@ -10,13 +10,12 @@ ADD . /go/src/github.com/luaduck/rolebot
 RUN go get && CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main .
 
 # stage2 moves the static binary into a super ultra lean image
-FROM alpine:latest
-
-RUN apk add --no-cache ca-certificates
+FROM scratch
 
 WORKDIR /app
 
 COPY --from=build /go/src/github.com/luaduck/rolebot/main .
+COPY --from=build /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-bundle.crt
 
 EXPOSE 53
 

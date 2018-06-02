@@ -100,7 +100,7 @@ func createOrReturnRole(s *discordgo.Session, guild string, rname string) (v *di
     role, err := s.GuildRoleCreate(guild)
     if err == nil {
       // Patch the role
-      return s.GuildRoleEdit(guild, role.ID, rname, 65280, false, 0, true)
+      return s.GuildRoleEdit(guild, role.ID, rname, 8290694, true, 0, true)
     }
   }
   return nil, errors.New("there was a problem creating the target role")
