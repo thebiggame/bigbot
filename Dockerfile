@@ -17,6 +17,4 @@ WORKDIR /app
 COPY --from=build /go/src/github.com/luaduck/rolebot/main .
 COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 
-EXPOSE 53
-
 CMD ["/app/main"]
