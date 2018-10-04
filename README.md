@@ -12,9 +12,17 @@ go install github.com/luaduck/rolebot
 (Installs to `~/go/bin/`)
 
 ## Running
+
 You will need a bot token from the [Discord developers site](https://discordapp.com/developers/applications/me)
 
 Usage:
+
+Via docker:
+```
+docker run -d --restart=always --name teambot thebiggame/rolebot /app/main -chan <channel> -token <token>
+```
+
+Or local install:
 ```
 ~$ rolebot
 Usage of rolebot:
