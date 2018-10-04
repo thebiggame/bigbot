@@ -22,7 +22,7 @@ Usage of rolebot:
     	Channel name to use (default "roles")
   -char string
         Command character to previx all commands with (default "!")
-  -t token
+  -token token
     	Bot token (required)
   -v	Verbose logging
 ```
