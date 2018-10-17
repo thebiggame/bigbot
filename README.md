@@ -1,13 +1,14 @@
-A simple discord bot written in [Go](https://golang.org/). It assigns a role to a user when they send a specific message.
+# thebiggame/rolebot
+A simple discord bot written in [Go](https://golang.org/).
 
-<img src="screenshots/1.jpg" width="300"> <img src="screenshots/2.jpg" width="300">
+_rolebot_ is responsible for the creation and assignment of special "team" roles to those who request them. This helps massively when you want to mention an entire team quickly and easily (or give them their own chat channel!).
 
 ## Install
 
 [Install Go](https://golang.org/doc/install#install)
 ```sh
-go get github.com/luaduck/rolebot
-go install github.com/luaduck/rolebot
+go get github.com/thebiggame/rolebot
+go install github.com/thebiggame/rolebot
 ```
 (Installs to `~/go/bin/`)
 
