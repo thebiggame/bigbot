@@ -97,9 +97,12 @@ func validateUserCanJoinRole(s *discordgo.Session, u *discordgo.User, guild stri
 		if err != nil {
 			return err
 		}
-		if role.Name == targetRole {
+		getRoleName := regexp.MustCompile(`(?i)(?:team):* ?(.*)`)
+		roleName := getRoleName.FindAllStringSubmatch(role.Name, -1)
+		// role names get normalized to lower case during the lookup only
+		if strings.ToLower(roleName[0][1]) == strings.ToLower(targetRole) {
 			// The Member is already part of the given GuildRole!
-			return errors.New("You are already a member of that team!")
+			return errors.New("⚠️ You are already a member of that team!")
 		}
 		// Check if it's a team role, and if it is, add to the counter
 		if strings.HasPrefix(role.Name, "Team:") {
@@ -108,7 +111,7 @@ func validateUserCanJoinRole(s *discordgo.Session, u *discordgo.User, guild stri
 	}
 	if roleCount >= maxUserRoles {
 		// Joining this Role would take the user over their limit
-		return errors.New(fmt.Sprintf("You are already a member of %d or more teams! Please contact an administrator if you need more.", maxUserRoles))
+		return errors.New(fmt.Sprintf("⚠️ You are already a member of %d or more teams! Please contact an administrator if you need more.", maxUserRoles))
 	}
 
 	// Succ(ess)
@@ -118,18 +121,21 @@ func validateUserCanJoinRole(s *discordgo.Session, u *discordgo.User, guild stri
 
 func createOrReturnRole(s *discordgo.Session, guild string, rname string) (v *discordgo.Role, err error) {
 	roles, err := s.GuildRoles(guild)
-	getRole := regexp.MustCompile(`(?:team):*`)
+	getRole := regexp.MustCompile(`(?i)(?:team):*`)
 	if !getRole.MatchString(rname) {
-		rname = fmt.Sprintln("Team: ", rname)
+		rname = fmt.Sprintln("Team:", rname)
 	}
 	rname = strings.Replace(rname, "\n", "", -1)
 	if err == nil {
 		for _, v := range roles {
-			if v.Name == rname {
+			// role names get normalized to lower case during the lookup only
+			if strings.ToLower(v.Name) == strings.ToLower(rname) {
+				log.Print("tying", rname, "to old role", v.Name)
 				return v, nil
 			}
 		}
 		// couldn't find the role in our list, create it
+		log.Print("creating new role ", rname)
 		role, err := s.GuildRoleCreate(guild)
 		if err == nil {
 			// Patch the role
@@ -158,24 +164,15 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 				debug("jointeam command only works in channels with name: ", activeChannel)
 				return
 			}
-			getRole := regexp.MustCompile(`(?:[\w]+) ?(.+)`)
+			getRole := regexp.MustCompile(`(?:[\w]+) +(.+)`)
 			regexout := getRole.FindAllStringSubmatch(m.Content, -1)
 			if regexout != nil {
 				roleID := regexout[0][1]
-				var text []string
-				if regexout[0][1] != "" {
-					log.Print("registering ", roleID)
-					text = []string{"Joining team: `", roleID, "`\n"}
-				} else {
-					log.Print("registering ", roleID, ": ")
-					text = []string{"Joining team: `", roleID, "`\n"}
-				}
-
 				err := validateUserCanJoinRole(s, m.Author, channel.GuildID, roleID)
 				if err == nil {
 					role, err := createOrReturnRole(s, channel.GuildID, roleID)
 					if err == nil {
-						_, err := s.ChannelMessageSend(m.ChannelID, strings.Join(text, ""))
+						_, err := s.ChannelMessageSend(m.ChannelID, fmt.Sprintln("🙌 Joining", role.Name))
 						if err == nil {
 							s.GuildMemberRoleAdd(channel.GuildID, m.Author.ID, role.ID)
 						}
@@ -185,7 +182,8 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 				} else {
 					s.ChannelMessageSend(m.ChannelID, err.Error())
 				}
-
+			} else {
+				s.ChannelMessageSend(m.ChannelID, "🤔 Please define a valid team name.")
 			}
 		}
 	}
