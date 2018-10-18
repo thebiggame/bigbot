@@ -30,14 +30,16 @@ Usage of rolebot:
   -chan name
     	Channel name to use (default "roles")
   -char string
-        Command character to previx all commands with (default "!")
+        Command character to prefix all commands with (default "!")
   -token token
     	Bot token (required)
+  -user_maxroles int
+        The maximum number of teams a User is allowed to join (default 5)
   -v	Verbose logging
 ```
 Example:
 ```sh
-rolebot -t YOURTOKENHERE
+rolebot -token YOURTOKENHERE
 ```
 ```
 2018/03/18 18:09:18 Running on servers:
