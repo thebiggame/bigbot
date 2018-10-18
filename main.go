@@ -17,14 +17,16 @@ var (
 	token         string
 	activeChannel = "roles"
 	verbose       = false
-	command_char  = "!"
+	commandChar   = "!"
+	maxUserRoles  = 5
 )
 
 func init() {
 	flag.StringVar(&token, "token", "", "Bot `token` (required)")
 	flag.StringVar(&activeChannel, "chan", "roles", "Channel `name` to use")
-	flag.StringVar(&command_char, "char", "!", "Command character to prefix all comamnds with")
+	flag.StringVar(&commandChar, "char", "!", "Command character to prefix all comamnds with")
 	flag.BoolVar(&verbose, "v", false, "Verbose logging")
+	flag.IntVar(&maxUserRoles, "user_maxroles", 5, "The maximum number of teams a User is allowed to join")
 	flag.Parse()
 	if token == "" {
 		flag.Usage()
@@ -81,10 +83,43 @@ func main() {
 	discord.Close()
 }
 
+func validateUserCanJoinRole(s *discordgo.Session, u *discordgo.User, guild string, targetRole string) (err error) {
+	// This function validates that the given GuildMember satisfies the following rules:
+	// - is not already assigned to more than 5 Team Roles
+	// - is not already assigned to the given targetRole
+	var roleCount int
+	member, err := s.GuildMember(guild, u.ID)
+	if err != nil {
+		return err
+	}
+	for _, v := range member.Roles {
+		role, err := s.State.Role(guild, v)
+		if err != nil {
+			return err
+		}
+		if role.Name == targetRole {
+			// The Member is already part of the given GuildRole!
+			return errors.New("You are already a member of that team!")
+		}
+		// Check if it's a team role, and if it is, add to the counter
+		if strings.HasPrefix(role.Name, "Team:") {
+			roleCount += 1
+		}
+	}
+	if roleCount >= maxUserRoles {
+		// Joining this Role would take the user over their limit
+		return errors.New(fmt.Sprintf("You are already a member of %d or more teams! Please contact an administrator if you need more.", maxUserRoles))
+	}
+
+	// Succ(ess)
+	return nil
+
+}
+
 func createOrReturnRole(s *discordgo.Session, guild string, rname string) (v *discordgo.Role, err error) {
 	roles, err := s.GuildRoles(guild)
-	// I am way too lazy for regex here
-	if !strings.HasPrefix(rname, "Team:") || !strings.HasPrefix(rname, "team:") || !strings.HasPrefix(rname, "Team") || !strings.HasPrefix(rname, "team") {
+	getRole := regexp.MustCompile(`(?:team):*`)
+	if !getRole.MatchString(rname) {
 		rname = fmt.Sprintln("Team: ", rname)
 	}
 	rname = strings.Replace(rname, "\n", "", -1)
@@ -101,7 +136,7 @@ func createOrReturnRole(s *discordgo.Session, guild string, rname string) (v *di
 			return s.GuildRoleEdit(guild, role.ID, rname, 8290694, true, 0, true)
 		}
 	}
-	return nil, errors.New("there was a problem creating the target role")
+	return nil, errors.New("There was a problem creating the target role")
 }
 
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
@@ -115,7 +150,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
-	if strings.HasPrefix(m.Content, "!") {
+	if strings.HasPrefix(m.Content, commandChar) {
 		// it's a command character chat message
 		command := m.Content[1:]
 		if strings.HasPrefix(command, "jointeam") {
@@ -127,7 +162,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			regexout := getRole.FindAllStringSubmatch(m.Content, -1)
 			if regexout != nil {
 				roleID := regexout[0][1]
-				text := []string{}
+				var text []string
 				if regexout[0][1] != "" {
 					log.Print("registering ", roleID)
 					text = []string{"Joining team: `", roleID, "`\n"}
@@ -136,13 +171,21 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 					text = []string{"Joining team: `", roleID, "`\n"}
 				}
 
-				_, err := s.ChannelMessageSend(m.ChannelID, strings.Join(text, ""))
+				err := validateUserCanJoinRole(s, m.Author, channel.GuildID, roleID)
 				if err == nil {
 					role, err := createOrReturnRole(s, channel.GuildID, roleID)
 					if err == nil {
-						s.GuildMemberRoleAdd(channel.GuildID, m.Author.ID, role.ID)
+						_, err := s.ChannelMessageSend(m.ChannelID, strings.Join(text, ""))
+						if err == nil {
+							s.GuildMemberRoleAdd(channel.GuildID, m.Author.ID, role.ID)
+						}
+					} else {
+						s.ChannelMessageSend(m.ChannelID, err.Error())
 					}
+				} else {
+					s.ChannelMessageSend(m.ChannelID, err.Error())
 				}
+
 			}
 		}
 	}
