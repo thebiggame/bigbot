@@ -1,0 +1,48 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  cri:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Git checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: '0'
+
+      - name: Generate CRI metadata
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: |
+            ghcr.io/${{ github.repository_owner }}/rolebot
+          labels: |
+            org.opencontainers.image.title=Rolebot
+            org.opencontainers.image.description=The tBG Role Bot.
+            org.opencontainers.image.url=https://github.com/thebiggame/rolebot
+            org.opencontainers.image.source=https://github.com/thebiggame/rolebot
+            org.opencontainers.image.vendor=theBIGGAME
+          tags: |
+            latest
+
+      - name: Login to GHCI
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+
+      - name: Build and push
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
