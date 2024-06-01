@@ -100,7 +100,7 @@ func validateUserCanJoinRole(s *discordgo.Session, u *discordgo.User, guild stri
 		getRoleName := regexp.MustCompile(`(?i)(?:team):* ?(.*)`)
 		roleName := getRoleName.FindAllStringSubmatch(role.Name, -1)
 		// role names get normalized to lower case during the lookup only
-		if strings.ToLower(roleName[0][1]) == strings.ToLower(targetRole) {
+		if roleName != nil && strings.ToLower(roleName[0][1]) == strings.ToLower(targetRole) {
 			// The Member is already part of the given GuildRole!
 			return errors.New("⚠️ You are already a member of that team!")
 		}
