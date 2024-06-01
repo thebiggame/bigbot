@@ -14,24 +14,37 @@ import (
 )
 
 var (
-	token         string
-	activeChannel = "roles"
-	verbose       = false
-	commandChar   = "!"
-	maxUserRoles  = 5
+	token          string
+	verbose        = false
+	maxUserRoles   = 5
+	removeCommands = false
+
+	dSession *discordgo.Session
 )
 
 func init() {
 	flag.StringVar(&token, "token", "", "Bot `token` (required)")
-	flag.StringVar(&activeChannel, "chan", "roles", "Channel `name` to use")
-	flag.StringVar(&commandChar, "char", "!", "Command character to prefix all comamnds with")
 	flag.BoolVar(&verbose, "v", false, "Verbose logging")
 	flag.IntVar(&maxUserRoles, "user_maxroles", 5, "The maximum number of teams a User is allowed to join")
+	flag.BoolVar(&removeCommands, "rmcmd", true, "Attempt to remove all commands after shutdown")
 	flag.Parse()
 	if token == "" {
 		flag.Usage()
 		os.Exit(1)
 	}
+
+	var err error
+	dSession, err = discordgo.New("Bot " + token)
+	if err != nil {
+		log.Fatal("error creating Discord session,", err)
+		return
+	}
+
+	dSession.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		if h, ok := commandHandlers[i.ApplicationCommandData().Name]; ok {
+			h(s, i)
+		}
+	})
 }
 
 func debug(v ...interface{}) {
@@ -42,21 +55,98 @@ func debug(v ...interface{}) {
 	}
 }
 
-func main() {
-	discord, err := discordgo.New("Bot " + token)
-	if err != nil {
-		log.Fatal("error creating Discord session,", err)
-		return
-	}
-	discord.AddHandler(messageCreate)
-	// discord.AddHandler(ready)
+var commands = []*discordgo.ApplicationCommand{
+	{
+		Name:        "team",
+		Description: "Join or leave a LAN team.",
+		Options: []*discordgo.ApplicationCommandOption{
+			{
+				Name:        "join",
+				Description: "Top-level subcommand",
+				Type:        discordgo.ApplicationCommandOptionSubCommand,
+				Options: []*discordgo.ApplicationCommandOption{
+					{
+						Type:        discordgo.ApplicationCommandOptionString,
+						Name:        "team-name",
+						Description: "Name of the team you wish to join.",
+						Required:    true,
+					},
+				},
+			},
+		},
+	},
+}
 
-	err = discord.Open()
+var commandHandlers = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
+	"teams": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		options := i.ApplicationCommandData().Options
+		content := ""
+
+		// As you can see, names of subcommands (nested, top-level)
+		// and subcommand groups are provided through the arguments.
+		switch options[0].Name {
+
+		case "join":
+			// OOB check
+			if len(options[0].Options) < 0 {
+				content = "🤔 Please provide a team name."
+				break
+			}
+			roleID := options[0].Options[0].StringValue()
+			err := validateUserCanJoinRole(s, i.Interaction.Member.User, i.GuildID, roleID)
+			if err != nil {
+				content = err.Error()
+				break
+			}
+			role, err := createOrReturnRole(s, i.GuildID, roleID)
+			if err != nil {
+				content = err.Error()
+				break
+			}
+			err = s.GuildMemberRoleAdd(i.GuildID, i.Interaction.Member.User.ID, role.ID)
+			if err != nil {
+				content = err.Error()
+				break
+			}
+			content = fmt.Sprintln("🙌 Joined", role.Name)
+
+		default:
+			content = "😶 Please use a sub-command."
+		}
+
+		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: content,
+			},
+		})
+	},
+}
+
+func main() {
+	dSession.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
+		log.Printf("Logged in as: %v#%v", s.State.User.Username, s.State.User.Discriminator)
+	})
+
+	err := dSession.Open()
 	if err != nil {
 		log.Fatal("error opening connection,", err)
 		return
 	}
-	guilds, err := discord.UserGuilds(100, "", "", false)
+	defer dSession.Close()
+
+	log.Println("adding commands...")
+	registeredCommands := make([]*discordgo.ApplicationCommand, len(commands))
+	for i, v := range commands {
+		// FIXME stubbed guild ID
+		cmd, err := dSession.ApplicationCommandCreate(dSession.State.User.ID, "", v)
+		if err != nil {
+			log.Panicf("Cannot create '%v' command: %v", v.Name, err)
+		}
+		registeredCommands[i] = cmd
+	}
+
+	guilds, err := dSession.UserGuilds(100, "", "", false)
 	log.Print("Running on servers:")
 	if len(guilds) == 0 {
 		log.Print("\t(none)")
@@ -65,22 +155,15 @@ func main() {
 		guild := guilds[index]
 		log.Print("\t", guild.Name, " (", guild.ID, ")")
 	}
-	log.Print("channel name: ", activeChannel)
 	log.Print("Join URL:")
-	log.Print("https://discordapp.com/api/oauth2/authorize?scope=bot&permissions=268446720&client_id=", discord.State.User.ID)
+	log.Print("https://discordapp.com/api/oauth2/authorize?scope=bot&permissions=268446720&client_id=", dSession.State.User.ID)
 
-	user, err := discord.User("@me")
-	if err != nil {
-		log.Print("Bot running. CTRL-C to exit.")
-	} else {
-		log.Print("Bot running as ", user.Username, "#", user.Discriminator, ". CTRL-C to exit.")
-	}
+	log.Print("Bot running. CTRL-C to exit.")
 
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
 	<-sc
 
-	discord.Close()
 }
 
 func validateUserCanJoinRole(s *discordgo.Session, u *discordgo.User, guild string, targetRole string) (err error) {
@@ -153,48 +236,4 @@ func createOrReturnRole(s *discordgo.Session, guild string, rname string) (v *di
 		return role, err
 	}
 	return nil, errors.New("There was a problem creating the target role")
-}
-
-func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if m.Author.ID == s.State.User.ID {
-		return
-	}
-	channel, err := s.Channel(m.ChannelID)
-	if err != nil {
-		log.Print("Error getting channel:")
-		log.Print(err)
-		return
-	}
-
-	if strings.HasPrefix(m.Content, commandChar) {
-		// it's a command character chat message
-		command := m.Content[1:]
-		if strings.HasPrefix(command, "jointeam") {
-			if channel.Name != activeChannel {
-				debug("jointeam command only works in channels with name: ", activeChannel)
-				return
-			}
-			getRole := regexp.MustCompile(`(?:[\w]+) +(.+)`)
-			regexout := getRole.FindAllStringSubmatch(m.Content, -1)
-			if regexout != nil {
-				roleID := regexout[0][1]
-				err := validateUserCanJoinRole(s, m.Author, channel.GuildID, roleID)
-				if err == nil {
-					role, err := createOrReturnRole(s, channel.GuildID, roleID)
-					if err == nil {
-						_, err := s.ChannelMessageSend(m.ChannelID, fmt.Sprintln("🙌 Joining", role.Name))
-						if err == nil {
-							s.GuildMemberRoleAdd(channel.GuildID, m.Author.ID, role.ID)
-						}
-					} else {
-						s.ChannelMessageSend(m.ChannelID, err.Error())
-					}
-				} else {
-					s.ChannelMessageSend(m.ChannelID, err.Error())
-				}
-			} else {
-				s.ChannelMessageSend(m.ChannelID, "🤔 Please define a valid team name.")
-			}
-		}
-	}
 }
