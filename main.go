@@ -78,7 +78,7 @@ var commands = []*discordgo.ApplicationCommand{
 }
 
 var commandHandlers = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
-	"teams": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	"team": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		options := i.ApplicationCommandData().Options
 		content := ""
 
