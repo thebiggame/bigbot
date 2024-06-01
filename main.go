@@ -56,7 +56,7 @@ func main() {
 		log.Fatal("error opening connection,", err)
 		return
 	}
-	guilds, err := discord.UserGuilds(100, "", "")
+	guilds, err := discord.UserGuilds(100, "", "", false)
 	log.Print("Running on servers:")
 	if len(guilds) == 0 {
 		log.Print("\t(none)")
@@ -136,11 +136,21 @@ func createOrReturnRole(s *discordgo.Session, guild string, rname string) (v *di
 		}
 		// couldn't find the role in our list, create it
 		log.Print("creating new role ", rname)
-		role, err := s.GuildRoleCreate(guild)
-		if err == nil {
-			// Patch the role
-			return s.GuildRoleEdit(guild, role.ID, rname, 8290694, true, 0, true)
+		var rColour = 8290694
+		var rHoist = true
+		var rMentionable = true
+		var rPerms int64 = 0
+		rParams := discordgo.RoleParams{
+			Name:         rname,
+			Color:        &rColour,
+			Hoist:        &rHoist,
+			Permissions:  &rPerms,
+			Mentionable:  &rMentionable,
+			UnicodeEmoji: nil,
+			Icon:         nil,
 		}
+		role, err := s.GuildRoleCreate(guild, &rParams)
+		return role, err
 	}
 	return nil, errors.New("There was a problem creating the target role")
 }
