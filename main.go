@@ -58,11 +58,11 @@ func debug(v ...interface{}) {
 var commands = []*discordgo.ApplicationCommand{
 	{
 		Name:        "team",
-		Description: "Join or leave a LAN team.",
+		Description: "Manage your membership of LAN teams",
 		Options: []*discordgo.ApplicationCommandOption{
 			{
 				Name:        "join",
-				Description: "Top-level subcommand",
+				Description: "Join a team",
 				Type:        discordgo.ApplicationCommandOptionSubCommand,
 				Options: []*discordgo.ApplicationCommandOption{
 					{
