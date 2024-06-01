@@ -92,6 +92,10 @@ var commandHandlers = map[string]func(s *discordgo.Session, i *discordgo.Interac
 				content = "🤔 Please provide a team name."
 				break
 			}
+			if i.Interaction.GuildID == "" {
+				content = "😡 This command can only be used in a server."
+				break
+			}
 			roleID := options[0].Options[0].StringValue()
 			err := validateUserCanJoinRole(s, i.Interaction.Member.User, i.GuildID, roleID)
 			if err != nil {
