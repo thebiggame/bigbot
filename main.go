@@ -2,9 +2,9 @@ package main
 
 import (
 	"errors"
-	"flag"
 	"fmt"
 	"github.com/bwmarrin/discordgo"
+	"github.com/jessevdk/go-flags"
 	"log"
 	"os"
 	"os/signal"
@@ -14,30 +14,38 @@ import (
 )
 
 var (
-	token          string
-	verbose        = false
-	maxUserRoles   = 5
-	removeCommands = false
+	runtimeOptions struct {
+		DiscordToken   string `short:"t" long:"token" description:"Discord bot token" required:"true" env:"DISCORD_TOKEN"`
+		DiscordGuildID string `long:"guildID" description:"Discord guild ID to monitor" default:"" env:"DISCORD_GUILD"`
+		Verbose        bool   `short:"v" long:"verbose" description:"Show verbose debug information"`
+		MaxUserRoles   int    `long:"maxUserRoles" default:"5" description:"Maximum number of teams a User can join"`
+		RemoveCommands bool   `long:"removeCommands" description:"Remove commands on shutdown"`
+	}
 
 	dSession *discordgo.Session
 )
 
 func init() {
-	flag.StringVar(&token, "token", "", "Bot `token` (required)")
-	flag.BoolVar(&verbose, "v", false, "Verbose logging")
-	flag.IntVar(&maxUserRoles, "user_maxroles", 5, "The maximum number of teams a User is allowed to join")
-	flag.BoolVar(&removeCommands, "rmcmd", true, "Attempt to remove all commands after shutdown")
-	flag.Parse()
-	if token == "" {
-		flag.Usage()
+	_, err := flags.Parse(&runtimeOptions)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func main() {
+	RunBot()
+}
+
+func RunBot() {
+	var err error
+
+	if runtimeOptions.DiscordToken == "" {
 		os.Exit(1)
 	}
 
-	var err error
-	dSession, err = discordgo.New("Bot " + token)
+	dSession, err = discordgo.New("Bot " + runtimeOptions.DiscordToken)
 	if err != nil {
 		log.Fatal("error creating Discord session,", err)
-		return
 	}
 
 	dSession.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -45,10 +53,49 @@ func init() {
 			h(s, i)
 		}
 	})
+
+	dSession.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
+		log.Printf("Logged in as: %v#%v", s.State.User.Username, s.State.User.Discriminator)
+	})
+
+	err = dSession.Open()
+	if err != nil {
+		log.Fatal("error opening connection,", err)
+	}
+	defer dSession.Close()
+
+	log.Println("adding commands...")
+	registeredCommands := make([]*discordgo.ApplicationCommand, len(commands))
+	for i, v := range commands {
+		cmd, err := dSession.ApplicationCommandCreate(dSession.State.User.ID, runtimeOptions.DiscordGuildID, v)
+		if err != nil {
+			log.Panicf("Cannot create '%v' command: %v", v.Name, err)
+		}
+		registeredCommands[i] = cmd
+	}
+
+	guilds, err := dSession.UserGuilds(100, "", "", false)
+	log.Print("Running on servers:")
+	if len(guilds) == 0 {
+		log.Print("\t(none)")
+	}
+	for index := range guilds {
+		guild := guilds[index]
+		log.Print("\t", guild.Name, " (", guild.ID, ")")
+	}
+	log.Print("Join URL:")
+	log.Print("https://discordapp.com/api/oauth2/authorize?scope=bot&permissions=268446720&client_id=", dSession.State.User.ID)
+
+	log.Print("Bot running. CTRL-C to exit.")
+
+	sc := make(chan os.Signal, 1)
+	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
+	<-sc
+
 }
 
 func debug(v ...interface{}) {
-	if verbose {
+	if runtimeOptions.Verbose {
 		fa := "Debug: "
 		v = append([]interface{}{fa}, v...)
 		log.Print(v...)
@@ -113,7 +160,6 @@ var commandHandlers = map[string]func(s *discordgo.Session, i *discordgo.Interac
 				break
 			}
 			content = fmt.Sprintln("🙌 Joined", role.Name)
-
 		default:
 			content = "😶 Please use a sub-command."
 		}
@@ -122,52 +168,10 @@ var commandHandlers = map[string]func(s *discordgo.Session, i *discordgo.Interac
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
 				Content: content,
+				Flags:   discordgo.MessageFlagsEphemeral,
 			},
 		})
 	},
-}
-
-func main() {
-	dSession.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
-		log.Printf("Logged in as: %v#%v", s.State.User.Username, s.State.User.Discriminator)
-	})
-
-	err := dSession.Open()
-	if err != nil {
-		log.Fatal("error opening connection,", err)
-		return
-	}
-	defer dSession.Close()
-
-	log.Println("adding commands...")
-	registeredCommands := make([]*discordgo.ApplicationCommand, len(commands))
-	for i, v := range commands {
-		// FIXME stubbed guild ID
-		cmd, err := dSession.ApplicationCommandCreate(dSession.State.User.ID, "", v)
-		if err != nil {
-			log.Panicf("Cannot create '%v' command: %v", v.Name, err)
-		}
-		registeredCommands[i] = cmd
-	}
-
-	guilds, err := dSession.UserGuilds(100, "", "", false)
-	log.Print("Running on servers:")
-	if len(guilds) == 0 {
-		log.Print("\t(none)")
-	}
-	for index := range guilds {
-		guild := guilds[index]
-		log.Print("\t", guild.Name, " (", guild.ID, ")")
-	}
-	log.Print("Join URL:")
-	log.Print("https://discordapp.com/api/oauth2/authorize?scope=bot&permissions=268446720&client_id=", dSession.State.User.ID)
-
-	log.Print("Bot running. CTRL-C to exit.")
-
-	sc := make(chan os.Signal, 1)
-	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
-	<-sc
-
 }
 
 func validateUserCanJoinRole(s *discordgo.Session, u *discordgo.User, guild string, targetRole string) (err error) {
@@ -189,16 +193,16 @@ func validateUserCanJoinRole(s *discordgo.Session, u *discordgo.User, guild stri
 		// role names get normalized to lower case during the lookup only
 		if roleName != nil && strings.ToLower(roleName[0][1]) == strings.ToLower(targetRole) {
 			// The Member is already part of the given GuildRole!
-			return errors.New("⚠️ You are already a member of that team!")
+			return errors.New("⚠️ You are already a member of that team")
 		}
 		// Check if it's a team role, and if it is, add to the counter
 		if strings.HasPrefix(role.Name, "Team:") {
 			roleCount += 1
 		}
 	}
-	if roleCount >= maxUserRoles {
+	if roleCount >= runtimeOptions.MaxUserRoles {
 		// Joining this Role would take the user over their limit
-		return errors.New(fmt.Sprintf("⚠️ You are already a member of %d or more teams! Please contact an administrator if you need more.", maxUserRoles))
+		return errors.New(fmt.Sprintf("⚠️ You are already a member of %d or more teams! Please contact an administrator if you need more", runtimeOptions.MaxUserRoles))
 	}
 
 	// Succ(ess)
@@ -239,5 +243,5 @@ func createOrReturnRole(s *discordgo.Session, guild string, rname string) (v *di
 		role, err := s.GuildRoleCreate(guild, &rParams)
 		return role, err
 	}
-	return nil, errors.New("There was a problem creating the target role")
+	return nil, errors.New("problem creating the target role")
 }
