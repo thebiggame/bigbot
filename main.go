@@ -188,7 +188,7 @@ func validateUserCanJoinRole(s *discordgo.Session, u *discordgo.User, guild stri
 		if err != nil {
 			return err
 		}
-		getRoleName := regexp.MustCompile(`(?i)(?:team):* ?(.*)`)
+		getRoleName := regexp.MustCompile(`(?i)^(?:Team):* ?(.*)`)
 		roleName := getRoleName.FindAllStringSubmatch(role.Name, -1)
 		// role names get normalized to lower case during the lookup only
 		if roleName != nil && strings.ToLower(roleName[0][1]) == strings.ToLower(targetRole) {
@@ -212,7 +212,7 @@ func validateUserCanJoinRole(s *discordgo.Session, u *discordgo.User, guild stri
 
 func createOrReturnRole(s *discordgo.Session, guild string, rname string) (v *discordgo.Role, err error) {
 	roles, err := s.GuildRoles(guild)
-	getRole := regexp.MustCompile(`(?i)(?:team):*`)
+	getRole := regexp.MustCompile(`(?i)^(?:Team):*`)
 	if !getRole.MatchString(rname) {
 		rname = fmt.Sprintln("Team:", rname)
 	}
