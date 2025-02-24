@@ -1,14 +1,17 @@
-# thebiggame/rolebot
+# thebiggame/bigbot
 A simple discord bot written in [Go](https://golang.org/).
 
-_rolebot_ is responsible for the creation and assignment of special "team" roles to those who request them. This helps massively when you want to mention an entire team quickly and easily (or give them their own chat channel!).
+_bigbot_ does many things. It is:
+* responsible for the creation and assignment of special "team" roles to those who request them 
+  * (this helps massively when you want to mention an entire team quickly and easily (or give them their own chat channel!))
+* a helper for tBG Crew actions, such as announcements / AV switching
 
 ## Install
 
 [Install Go](https://golang.org/doc/install#install)
 ```sh
-go get github.com/thebiggame/rolebot
-go install github.com/thebiggame/rolebot
+go get github.com/thebiggame/bigbot
+go install github.com/thebiggame/bigbot
 ```
 (Installs to `~/go/bin/`)
 
@@ -20,13 +23,13 @@ Usage:
 
 Via docker:
 ```
-docker run -d --restart=always --name teambot thebiggame/rolebot /app/main -chan <channel> -token <token>
+docker run -d --restart=always --name bigbot thebiggame/bigbot /app/main -chan <channel> -token <token>
 ```
 
 Or local install:
 ```
-~$ rolebot
-Usage of rolebot:
+~$ bigbot
+Usage of bigbot:
   -chan name
     	Channel name to use (default "roles")
   -char string
@@ -39,7 +42,7 @@ Usage of rolebot:
 ```
 Example:
 ```sh
-rolebot -token YOURTOKENHERE
+bigbot -token YOURTOKENHERE
 ```
 ```
 2018/03/18 18:09:18 Running on servers:
@@ -54,10 +57,10 @@ paste the link into a web browser to add the bot to your discord server (you wil
 ## Command Usage
 
 ### Register
-Usage: `!jointeam (team name)`
+Usage: `/team join (team name)`
 
 Command only works in a channel named `roles` (or other supplied with `-c`). It can be used by anyone.
 Example:
 
-`jointeam iBUYJEFFS`
+`/team join iBUYJEFFS`
 

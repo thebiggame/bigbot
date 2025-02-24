@@ -1,4 +1,4 @@
-module github.com/thebiggame/rolebot
+module github.com/thebiggame/bigbot
 
 go 1.22
 
