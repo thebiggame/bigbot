@@ -1,27 +1,100 @@
 package bot
 
 import (
+	"context"
+	"errors"
 	"github.com/bwmarrin/discordgo"
+	"github.com/thebiggame/bigbot/internal/avbridge"
 	"github.com/thebiggame/bigbot/internal/config"
+	log "github.com/thebiggame/bigbot/internal/log"
 	"github.com/thebiggame/bigbot/internal/teamroles"
-	"log"
+	"golang.org/x/sync/errgroup"
+	baselog "log"
 	"os"
 	"os/signal"
+	"reflect"
+	"sync"
 	"syscall"
 )
 
 type BotModule interface {
-	Commands() ([]*discordgo.ApplicationCommand, error)
-	CommandHandlers() (map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate), error)
+	Start(context context.Context) error
+	HandleDiscordCommand(session *discordgo.Session, interaction *discordgo.InteractionCreate) (handled bool, err error)
 }
 
 type BigBot struct {
-	dSession *discordgo.Session
+	DiscordSession *discordgo.Session
+	commands       []*discordgo.ApplicationCommand
+	modules        []BotModule
 }
 
 func New() *BigBot {
-	bot := &BigBot{}
+	// init logging
+	log.Logger = baselog.New(os.Stdout, "", baselog.LstdFlags)
+
+	// get base discord session
+	DiscordSession, err := discordgo.New("Bot " + config.RuntimeConfig.DiscordToken)
+	if err != nil {
+		log.LogFatal("error creating Discord session,", err)
+	}
+
+	// create primary bot object and return it
+	bot := &BigBot{
+		DiscordSession: DiscordSession,
+	}
 	return bot
+}
+
+// WithWANModules loads the modules that should usually run in a cloud / WAN environment.
+// These modules should not normally need network access to a LAN event.
+func (b *BigBot) WithWANModules() *BigBot {
+	// teamRoles
+	module := teamroles.New(b.DiscordSession)
+	b.modules = append(b.modules, module)
+	return b
+}
+
+// WithLANModules loads the modules that are relevant to the bot running in a LAN environment,
+// e.g. those that require intranet access to function properly.
+func (b *BigBot) WithLANModules() *BigBot {
+	// avbridge
+	module, err := avbridge.New(b.DiscordSession)
+	if err != nil {
+		panic(err)
+	}
+	b.modules = append(b.modules, module)
+	return b
+}
+
+func (b *BigBot) handleDiscordCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	var wg sync.WaitGroup
+	errorChan := make(chan error, len(b.modules))
+	for _, m := range b.modules {
+		wg.Add(1)
+		go func(mod *BotModule) {
+			defer wg.Done()
+			handled, err := m.HandleDiscordCommand(s, i)
+			if err != nil {
+				errorChan <- err
+				return
+			}
+			if handled {
+				log.LogDebugf("Module %s handled command %v", reflect.TypeOf(mod), i.ApplicationCommandData().Name)
+			}
+		}(&m)
+	}
+	wg.Wait()
+	for range errorChan {
+		err := <-errorChan
+		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: err.Error(),
+				Flags:   discordgo.MessageFlagsEphemeral,
+			},
+		})
+	}
+
 }
 
 func (b *BigBot) Run() {
@@ -31,61 +104,62 @@ func (b *BigBot) Run() {
 		os.Exit(1)
 	}
 
-	b.dSession, err = discordgo.New("Bot " + config.RuntimeConfig.DiscordToken)
-	if err != nil {
-		log.Fatal("error creating Discord session,", err)
-	}
-
-	b.dSession.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
-		log.Printf("Logged in as: %v#%v", s.State.User.Username, s.State.User.Discriminator)
+	b.DiscordSession.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
+		log.LogInfof("Logged in as: %v#%v", s.State.User.Username, s.State.User.Discriminator)
 	})
 
-	err = b.dSession.Open()
+	err = b.DiscordSession.Open()
 	if err != nil {
-		log.Fatal("error opening connection,", err)
+		log.LogFatal("error opening connection,", err)
+		return
 	}
-	defer b.dSession.Close()
+	defer b.DiscordSession.Close()
 
-	log.Println("adding commands...")
-	var commands []*discordgo.ApplicationCommand
-	commandHandlers := map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){}
+	// Create app context (this is passed to modules).
+	// The signal.NotifyContext is a special context that gets torn down when an interrupt / SIGTERM is received.
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 
-	// teamRoles
-	commands = append(commands, teamroles.Commands...)
-	for k, v := range teamroles.CommandHandlers {
-		commandHandlers[k] = v
-	}
+	// This context is the one that we actually pass - if an initialisation error happens with a module,
+	// it propagates out to the rest.
+	g, gCtx := errgroup.WithContext(ctx)
 
-	b.dSession.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-		if h, ok := commandHandlers[i.ApplicationCommandData().Name]; ok {
-			h(s, i)
-		}
-	})
-	registeredCommands := make([]*discordgo.ApplicationCommand, len(commands))
-	for i, v := range commands {
-		cmd, err := b.dSession.ApplicationCommandCreate(b.dSession.State.User.ID, config.RuntimeConfig.DiscordGuildID, v)
-		if err != nil {
-			log.Panicf("Cannot create '%v' command: %v", v.Name, err)
-		}
-		registeredCommands[i] = cmd
+	for _, module := range b.modules {
+		g.Go(func() error {
+			err := module.Start(gCtx)
+			if err != nil {
+				log.LogErrf("error with module %v: %v", reflect.TypeOf(module), err)
+			}
+			return err
+		})
 	}
 
-	guilds, err := b.dSession.UserGuilds(100, "", "", false)
-	log.Print("Running on servers:")
+	b.DiscordSession.AddHandler(b.handleDiscordCommand)
+
+	guilds, err := b.DiscordSession.UserGuilds(100, "", "", false)
+	log.LogInfo("Running on servers:")
 	if len(guilds) == 0 {
-		log.Print("\t(none)")
+		log.LogInfo("\t(none)")
+	} else {
+		for index := range guilds {
+			guild := guilds[index]
+			log.LogInfo("\t", guild.Name, " (", guild.ID, ")")
+		}
 	}
-	for index := range guilds {
-		guild := guilds[index]
-		log.Print("\t", guild.Name, " (", guild.ID, ")")
+
+	log.LogInfof("Join URL: https://discordapp.com/api/oauth2/authorize?scope=bot&permissions=268446720&client_id=%s", b.DiscordSession.State.User.ID)
+	log.LogInfo("Bot running. CTRL-C to exit.")
+
+	// Await app context completion (i.e usually a SIGTERM / interrupt).
+	<-ctx.Done()
+
+	log.LogInfo("Bot stopping...")
+
+	// Closedown the context.
+	if closeErr := g.Wait(); closeErr == nil || errors.Is(closeErr, context.Canceled) {
+		log.LogInfo("Bot stopped gracefully.")
+	} else {
+		log.LogWarn("Error during shutdown: %v", closeErr)
 	}
-	log.Print("Join URL:")
-	log.Print("https://discordapp.com/api/oauth2/authorize?scope=bot&permissions=268446720&client_id=", b.dSession.State.User.ID)
-
-	log.Print("Bot running. CTRL-C to exit.")
-
-	sc := make(chan os.Signal, 1)
-	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
-	<-sc
 
 }

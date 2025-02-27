@@ -1,22 +1,28 @@
 package teamroles
 
 import (
+	"context"
 	"fmt"
 	"github.com/bwmarrin/discordgo"
 	"github.com/thebiggame/bigbot/internal/config"
-	"github.com/thebiggame/bigbot/internal/helpers"
+	"github.com/thebiggame/bigbot/internal/log"
 	"regexp"
 	"strings"
 )
 
-var Commands = []*discordgo.ApplicationCommand{
+type TeamRoles struct {
+	discord *discordgo.Session
+	close   chan bool
+}
+
+var commands = []*discordgo.ApplicationCommand{
 	{
 		Name:        "team",
-		Description: "Manage your membership of LAN teams",
+		Description: "🧑‍🤝‍🧑 Manage your membership of LAN teams",
 		Options: []*discordgo.ApplicationCommandOption{
 			{
 				Name:        "new",
-				Description: "Create a new Team.",
+				Description: "🧑‍🤝‍🧑✨ Create a new Team.",
 				Type:        discordgo.ApplicationCommandOptionSubCommand,
 				Options: []*discordgo.ApplicationCommandOption{
 					{
@@ -29,7 +35,7 @@ var Commands = []*discordgo.ApplicationCommand{
 			},
 			{
 				Name:        "join",
-				Description: "Join an existing team",
+				Description: "🧑‍🤝‍🧑🤝 Join an existing team",
 				Type:        discordgo.ApplicationCommandOptionSubCommand,
 				Options: []*discordgo.ApplicationCommandOption{
 					{
@@ -42,7 +48,7 @@ var Commands = []*discordgo.ApplicationCommand{
 			},
 			{
 				Name:        "leave",
-				Description: "Leave a team",
+				Description: "🧑‍🤝‍🧑👋 Leave a team",
 				Type:        discordgo.ApplicationCommandOptionSubCommand,
 				Options: []*discordgo.ApplicationCommandOption{
 					{
@@ -57,11 +63,31 @@ var Commands = []*discordgo.ApplicationCommand{
 	},
 }
 
-var CommandHandlers = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
-	"team": handleTeamCommand,
+func New(discord *discordgo.Session) *TeamRoles {
+	return &TeamRoles{
+		discord: discord,
+	}
 }
 
-func handleTeamCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
+func (mod *TeamRoles) Start(ctx context.Context) (err error) {
+	registeredCommands := make([]*discordgo.ApplicationCommand, len(commands))
+	for i, v := range commands {
+		cmd, err := mod.discord.ApplicationCommandCreate(mod.discord.State.User.ID, config.RuntimeConfig.DiscordGuildID, v)
+		if err != nil {
+			return fmt.Errorf("cannot create command '%v': %w", v.Name, err)
+		}
+		registeredCommands[i] = cmd
+	}
+
+	// This module simply registers handlers, and does not need to continue running (so we don't need the context)
+	return ctx.Err()
+}
+
+func (mod *TeamRoles) HandleDiscordCommand(s *discordgo.Session, i *discordgo.InteractionCreate) (handled bool, err error) {
+	if i.ApplicationCommandData().Name != "team" {
+		return false, nil
+	}
+
 	options := i.ApplicationCommandData().Options
 	content := ""
 
@@ -129,7 +155,7 @@ func handleTeamCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		content = "😶 Please use a sub-command."
 	}
 
-	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+	return true, s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
 			Content: content,
@@ -217,12 +243,12 @@ func createOrReturnRole(s *discordgo.Session, guild string, rname string) (v *di
 		for _, v := range roles {
 			// role names get normalized to lower case during the lookup only
 			if strings.ToLower(v.Name) == strings.ToLower(rname) {
-				helpers.LogDebug("tying", rname, "to old role", v.Name)
+				log.LogDebug("tying", rname, "to old role", v.Name)
 				return v, nil
 			}
 		}
 		// couldn't find the role in our list, create it
-		helpers.LogDebug("tying", rname, "to new role", rname)
+		log.LogDebug("tying", rname, "to new role", rname)
 		var rColour = 8290694
 		var rHoist = true
 		var rMentionable = true
