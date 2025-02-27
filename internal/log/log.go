@@ -3,13 +3,14 @@ package log
 import (
 	"fmt"
 	"log"
+	"os"
 )
 
 var Logger *log.Logger
 
-// SetLogger sets the active logger to the Log-compliant logger passed.
-func SetLogger(logger *log.Logger) {
-	Logger = logger
+// Initialise default logger.
+func init() {
+	Logger = log.New(os.Stdout, "", log.LstdFlags)
 }
 
 func LogDebug(v ...interface{}) {

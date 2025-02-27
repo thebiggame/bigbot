@@ -10,7 +10,6 @@ import (
 	log "github.com/thebiggame/bigbot/internal/log"
 	"github.com/thebiggame/bigbot/internal/teamroles"
 	"golang.org/x/sync/errgroup"
-	baselog "log"
 	"os"
 	"os/signal"
 	"reflect"
@@ -29,21 +28,18 @@ type BigBot struct {
 	modules        []BotModule
 }
 
-func New() *BigBot {
-	// init logging
-	log.Logger = baselog.New(os.Stdout, "", baselog.LstdFlags)
-
+func New() (*BigBot, error) {
 	// get base discord session
 	DiscordSession, err := discordgo.New("Bot " + config.RuntimeConfig.Discord.Token)
 	if err != nil {
-		log.LogFatal("error creating Discord session,", err)
+		return nil, fmt.Errorf("error creating Discord session: %w", err)
 	}
 
 	// create primary bot object and return it
 	bot := &BigBot{
 		DiscordSession: DiscordSession,
 	}
-	return bot
+	return bot, nil
 }
 
 // WithWANModules loads the modules that should usually run in a cloud / WAN environment.
@@ -125,7 +121,7 @@ func (b *BigBot) Run() (err error) {
 	for _, module := range b.modules {
 		g.Go(func() error {
 			err := module.Start(gCtx)
-			if err != nil {
+			if err != nil && !errors.Is(err, context.Canceled) {
 				log.LogErrf("error with module %v: %v", reflect.TypeOf(module), err)
 			}
 			return err

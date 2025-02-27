@@ -5,6 +5,7 @@ import (
 	"github.com/andreykaipov/goobs/api"
 	"github.com/hashicorp/logutils"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	"github.com/thebiggame/bigbot/internal/bot"
 	log2 "github.com/thebiggame/bigbot/internal/log"
 	"log"
@@ -30,18 +31,25 @@ func init() {
 }
 
 func Run(cmd *cobra.Command, args []string) {
-	log2.SetLogger(log.New(
+	logFlags := log.Ltime
+	logLevel := strings.ToUpper(viper.GetString("log.level"))
+	if logLevel == "TRACE" {
+		logFlags |= log.Llongfile
+	}
+	log2.Logger = log.New(
 		&logutils.LevelFilter{
-			Levels:   []logutils.LogLevel{"TRACE", "DEBUG", "INFO", "ERROR", "FATAL"},
-			MinLevel: logutils.LogLevel(strings.ToUpper(os.Getenv("BIGBOT_LOG"))),
+			Levels:   []logutils.LogLevel{"TRACE", "DEBUG", "INFO", "WARN", "ERROR", "FATAL"},
+			MinLevel: logutils.LogLevel(strings.ToUpper(viper.GetString("log.level"))),
 			Writer: api.LoggerWithWrite(func(p []byte) (int, error) {
 				return os.Stderr.WriteString(fmt.Sprintf("\033[36m%s\033[0m", p))
 			}),
 		},
 		"",
-		log.Ltime|log.Lshortfile,
-	))
-	botInstance := bot.New()
+		logFlags,
+	)
+	botInstance, err := bot.New()
+	cobra.CheckErr(err)
+
 	if serveLAN {
 		botInstance = botInstance.WithLANModules()
 	}
