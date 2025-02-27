@@ -25,7 +25,7 @@ func init() {
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is ./bigbot.yaml)")
 
-	rootCmd.PersistentFlags().String("log.level", "info", "Log level (debug, info, warn, error, fatal)")
+	rootCmd.PersistentFlags().String("log.level", "info", "Log level (trace, debug, info, warn, error, fatal)")
 
 	viper.BindPFlag("log.level", rootCmd.Flags().Lookup("log.level"))
 
