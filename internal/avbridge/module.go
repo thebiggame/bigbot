@@ -35,16 +35,20 @@ func (mod *AVBridge) Start(ctx context.Context) (err error) {
 	}
 
 	// goobsDaemon needs the close channel to be ready.
-	goobsCtx, cancel := context.WithCancel(ctx)
-
-	go mod.goobsDaemon(goobsCtx)
+	goobsCtx, goobsCancel := context.WithCancel(ctx)
+	var wg sync.WaitGroup
+	go func() {
+		wg.Add(1)
+		defer wg.Done()
+		mod.goobsDaemon(goobsCtx)
+	}()
 
 	for {
 		select {
 		// Spinloop here to make sure that we stay alive long enough for the context to get torn down properly.
 		case <-ctx.Done():
-			cancel()
-			<-goobsCtx.Done()
+			goobsCancel()
+			wg.Wait()
 			return ctx.Err()
 		}
 	}
