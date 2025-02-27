@@ -72,7 +72,7 @@ func New(discord *discordgo.Session) *TeamRoles {
 func (mod *TeamRoles) Start(ctx context.Context) (err error) {
 	registeredCommands := make([]*discordgo.ApplicationCommand, len(commands))
 	for i, v := range commands {
-		cmd, err := mod.discord.ApplicationCommandCreate(mod.discord.State.User.ID, config.RuntimeConfig.DiscordGuildID, v)
+		cmd, err := mod.discord.ApplicationCommandCreate(mod.discord.State.User.ID, config.RuntimeConfig.Discord.GuildID, v)
 		if err != nil {
 			return fmt.Errorf("cannot create command '%v': %w", v.Name, err)
 		}

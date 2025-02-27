@@ -3,6 +3,7 @@ package bot
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/bwmarrin/discordgo"
 	"github.com/thebiggame/bigbot/internal/avbridge"
 	"github.com/thebiggame/bigbot/internal/config"
@@ -33,7 +34,7 @@ func New() *BigBot {
 	log.Logger = baselog.New(os.Stdout, "", baselog.LstdFlags)
 
 	// get base discord session
-	DiscordSession, err := discordgo.New("Bot " + config.RuntimeConfig.DiscordToken)
+	DiscordSession, err := discordgo.New("Bot " + config.RuntimeConfig.Discord.Token)
 	if err != nil {
 		log.LogFatal("error creating Discord session,", err)
 	}
@@ -97,11 +98,9 @@ func (b *BigBot) handleDiscordCommand(s *discordgo.Session, i *discordgo.Interac
 
 }
 
-func (b *BigBot) Run() {
-	var err error
-
-	if config.RuntimeConfig.DiscordToken == "" {
-		os.Exit(1)
+func (b *BigBot) Run() (err error) {
+	if config.RuntimeConfig.Discord.Token == "" {
+		return errors.New("no discord token provided")
 	}
 
 	b.DiscordSession.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
@@ -110,8 +109,7 @@ func (b *BigBot) Run() {
 
 	err = b.DiscordSession.Open()
 	if err != nil {
-		log.LogFatal("error opening connection,", err)
-		return
+		return fmt.Errorf("error opening discord connection: %w", err)
 	}
 	defer b.DiscordSession.Close()
 
@@ -161,5 +159,6 @@ func (b *BigBot) Run() {
 	} else {
 		log.LogWarn("Error during shutdown: %v", closeErr)
 	}
+	return
 
 }

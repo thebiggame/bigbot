@@ -23,33 +23,32 @@ Usage:
 
 Via docker:
 ```
-docker run -d --restart=always --name bigbot thebiggame/bigbot /app/main -chan <channel> -token <token>
+docker run -d --restart=always --name bigbot thebiggame/bigbot /app/main run --wan
 ```
 
 Or local install:
 ```
-~$ bigbot
-Usage of bigbot:
-  -chan name
-    	Channel name to use (default "roles")
-  -char string
-        Command character to prefix all commands with (default "!")
-  -token token
-    	Bot token (required)
-  -user_maxroles int
-        The maximum number of teams a User is allowed to join (default 5)
-  -v	Verbose logging
+~$ bigbot run
+Usage:
+  bigbot run [flags]
+
+Flags:
+  -h, --help   help for run
+      --lan    Serve the LAN portion of the bot.
+      --wan    Serve the WAN portion of the bot.
+
+Global Flags:
+      --config string      config file (default is ./bigbot.yaml)
+      --log.level string   Log level (debug, info, warn, error, fatal) (default "info")
 ```
 Example:
 ```sh
-bigbot -token YOURTOKENHERE
+bigbot run --wan
 ```
 ```
 2018/03/18 18:09:18 Running on servers:
-2018/03/18 18:09:18 	test (272429559406919681)
-2018/03/18 18:09:18 channel name: roles
-2018/03/18 18:09:18 Join URL:
-2018/03/18 18:09:18 https://discordapp.com/api/oauth2/authorize?scope=bot&permissions=268446720&client_id=(removed)
+2018/03/18 18:09:18 	test (removed)
+2018/03/18 18:09:18 Join URL: https://discordapp.com/api/oauth2/authorize?scope=bot&permissions=268446720&client_id=(removed)
 2018/03/18 18:09:18 Bot running as (removed). CTRL-C to exit.
 ```
 paste the link into a web browser to add the bot to your discord server (you will need the Manage Server permission)
@@ -57,10 +56,21 @@ paste the link into a web browser to add the bot to your discord server (you wil
 ## Command Usage
 
 ### Register
-Usage: `/team join (team name)`
+Usage: `/team create (team name)`
 
-Command only works in a channel named `roles` (or other supplied with `-c`). It can be used by anyone.
+This command takes any string team name and creates a team role with that name.
+
 Example:
-
 `/team join iBUYJEFFS`
 
+### Join
+Usage: `/team join (team)`
+
+This command requires a team role (enforced in Discord).
+
+### Leave
+Usage: `/team leave (team)`
+
+This command requires a team role (enforced in Discord).
+
+You may only Leave teams that you are a member of (and not other roles).
