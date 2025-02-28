@@ -1,7 +1,8 @@
-# thebiggame/bigbot
+# thebiggame/BIGbot
+<img align="right" alt="BIGbot logo" src="assets/logo.png" width="200">
 A simple discord bot written in [Go](https://golang.org/).
 
-_bigbot_ does many things. It is:
+_BIGbot_ does many things. It is:
 * responsible for the creation and assignment of special "team" roles to those who request them 
   * (this helps massively when you want to mention an entire team quickly and easily (or give them their own chat channel!))
 * a helper for tBG Crew actions, such as announcements / AV switching
