@@ -4,6 +4,7 @@ import (
 	"github.com/andreykaipov/goobs/api/requests/scenes"
 	"github.com/andreykaipov/goobs/api/requests/transitions"
 	"github.com/bwmarrin/discordgo"
+	"github.com/thebiggame/bigbot/internal/helpers"
 )
 
 var commands = []*discordgo.ApplicationCommand{
@@ -36,7 +37,7 @@ func (mod *AVBridge) HandleDiscordCommand(s *discordgo.Session, i *discordgo.Int
 		return false, nil
 	}
 	options := i.ApplicationCommandData().Options
-	content := ""
+	content := "😶 Unknown command..."
 
 	switch options[0].Name {
 	case "status":
@@ -50,98 +51,81 @@ func (mod *AVBridge) HandleDiscordCommand(s *discordgo.Session, i *discordgo.Int
 			content = "🙅 OBS is **not connected.**"
 			break
 		}
-		err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Flags: discordgo.MessageFlagsEphemeral,
-			},
-		})
-		if err != nil {
+		// Let the client know we're working on it.
+		if helpers.DiscordDeferEphemeralInteraction(s, i) != nil {
 			return true, err
 		}
-
-		// Set preview scene to black...
-		_, err = mod.ws.Scenes.SetCurrentPreviewScene(&scenes.SetCurrentPreviewSceneParams{
-			SceneName: &sceneBlack,
-		})
-		if err != nil {
-			return true, err
-		}
-
-		// then transition to it.
-		_, err = mod.ws.Transitions.SetCurrentSceneTransition(&transitions.SetCurrentSceneTransitionParams{
-			TransitionName: &transitionFade,
-		})
-		if err != nil {
-			return true, err
-		}
-		_, err = mod.ws.Transitions.TriggerStudioModeTransition(&transitions.TriggerStudioModeTransitionParams{})
-		if err != nil {
-			return true, err
-		}
-
-		// Finally, confirm we did the thing.
-		_, err = s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
-			Content: "_Fading to black..._",
-		})
-		if err != nil {
-			return true, err
-		}
-		return true, nil
+		return true, mod.discordCommandAVFTB(s, i)
 	case "infoboard":
 		if !mod.goobsIsConnected() {
 			content = "🙅 OBS is **not connected.**"
 			break
 		}
-		err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Flags: discordgo.MessageFlagsEphemeral,
-			},
-		})
-		if err != nil {
+		// Let the client know we're working on it.
+		if helpers.DiscordDeferEphemeralInteraction(s, i) != nil {
 			return true, err
 		}
-
-		// Set preview scene to Infoboard...
-		_, err = mod.ws.Scenes.SetCurrentPreviewScene(&scenes.SetCurrentPreviewSceneParams{
-			SceneName: &sceneDefault,
-		})
-		if err != nil {
-			return true, err
-		}
-
-		// then transition to it.
-		_, err = mod.ws.Transitions.SetCurrentSceneTransition(&transitions.SetCurrentSceneTransitionParams{
-			TransitionName: &transitionStinger,
-		})
-		if err != nil {
-			return true, err
-		}
-		_, err = mod.ws.Transitions.TriggerStudioModeTransition(&transitions.TriggerStudioModeTransitionParams{})
-		if err != nil {
-			return true, err
-		}
-
-		// Finally, confirm we did the thing.
-		_, err = s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
-			Content: "Switched to Infoboard.",
-		})
-		if err != nil {
-			return true, err
-		}
-		return true, nil
-	default:
-		content = "😶 Please use a sub-command."
+		return true, mod.discordCommandAVInfoboard(s, i)
 	}
 
-	return true, s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Content: content,
-			Flags:   discordgo.MessageFlagsEphemeral,
-		},
+	// Not handled by specific handler function, respond with content data.
+	return true, helpers.DiscordInteractionEphemeralResponse(s, i, content)
+}
+
+func (mod *AVBridge) discordCommandAVFTB(s *discordgo.Session, i *discordgo.InteractionCreate) (err error) {
+	// Set preview scene to black...
+	_, err = mod.ws.Scenes.SetCurrentPreviewScene(&scenes.SetCurrentPreviewSceneParams{
+		SceneName: &sceneBlack,
 	})
+	if err != nil {
+		return err
+	}
+
+	// then transition to it.
+	_, err = mod.ws.Transitions.SetCurrentSceneTransition(&transitions.SetCurrentSceneTransitionParams{
+		TransitionName: &transitionFade,
+	})
+	if err != nil {
+		return err
+	}
+	_, err = mod.ws.Transitions.TriggerStudioModeTransition(&transitions.TriggerStudioModeTransitionParams{})
+	if err != nil {
+		return err
+	}
+
+	// Finally, confirm we did the thing.
+	_, err = s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+		Content: "_Fading to black..._",
+	})
+	return err
+}
+
+func (mod *AVBridge) discordCommandAVInfoboard(s *discordgo.Session, i *discordgo.InteractionCreate) (err error) {
+	// Set preview scene to Infoboard...
+	_, err = mod.ws.Scenes.SetCurrentPreviewScene(&scenes.SetCurrentPreviewSceneParams{
+		SceneName: &sceneDefault,
+	})
+	if err != nil {
+		return err
+	}
+
+	// then transition to it.
+	_, err = mod.ws.Transitions.SetCurrentSceneTransition(&transitions.SetCurrentSceneTransitionParams{
+		TransitionName: &transitionStinger,
+	})
+	if err != nil {
+		return err
+	}
+	_, err = mod.ws.Transitions.TriggerStudioModeTransition(&transitions.TriggerStudioModeTransitionParams{})
+	if err != nil {
+		return err
+	}
+
+	// Finally, confirm we did the thing.
+	_, err = s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+		Content: "Switched to Infoboard.",
+	})
+	return err
 }
 
 var defaultAVCommandPermissions int64 = discordgo.PermissionAdministrator

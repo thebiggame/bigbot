@@ -55,6 +55,8 @@ func (mod *AVBridge) goobsIsConnected() bool {
 	return err == nil
 }
 
+// goobsDaemon is responsible for watching the GOOBS connection on a regular basis and
+// re-connecting if it seems to be unavailable for any reason.
 func (mod *AVBridge) goobsDaemon(ctx context.Context) {
 	err := mod.goobsConnect()
 	if err != nil {

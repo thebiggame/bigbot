@@ -32,6 +32,7 @@ func (mod *AVBridge) Start(ctx context.Context) (err error) {
 	go func() {
 		wg.Add(1)
 		defer wg.Done()
+		// goobsDaemon is responsible for watching the goobs connection and keeping it as healthy as possible
 		mod.goobsDaemon(goobsCtx)
 	}()
 

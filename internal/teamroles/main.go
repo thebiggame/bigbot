@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/bwmarrin/discordgo"
 	"github.com/thebiggame/bigbot/internal/config"
+	"github.com/thebiggame/bigbot/internal/helpers"
 	"github.com/thebiggame/bigbot/internal/log"
 	"regexp"
 	"strings"
@@ -180,13 +181,7 @@ func (mod *TeamRoles) HandleDiscordCommand(s *discordgo.Session, i *discordgo.In
 		content = "😶 Please use a sub-command."
 	}
 
-	return true, s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Content: content,
-			Flags:   discordgo.MessageFlagsEphemeral,
-		},
-	})
+	return true, helpers.DiscordInteractionEphemeralResponse(s, i, content)
 }
 
 func validateUserCanJoinRoleByName(s *discordgo.Session, u *discordgo.User, guild, targetRole string) error {
