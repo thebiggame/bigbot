@@ -76,7 +76,7 @@ func (b *BigBot) handleDiscordCommand(s *discordgo.Session, i *discordgo.Interac
 				return
 			}
 			if handled {
-				log.LogDebugf("Module %s handled command %v", reflect.TypeOf(mod), i.ApplicationCommandData().Name)
+				log.LogDebugf("Module %s handled command %v", reflect.TypeOf(m).Elem().Name(), i.ApplicationCommandData().Name)
 			}
 		}(&m)
 	}

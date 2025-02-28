@@ -18,7 +18,7 @@ type TeamRoles struct {
 var commands = []*discordgo.ApplicationCommand{
 	{
 		Name:        "team",
-		Description: "🧑‍🤝‍🧑 Manage your membership of LAN teams",
+		Description: "🧑‍🤝‍🧑 Manage your membership of LAN teams.",
 		Options: []*discordgo.ApplicationCommandOption{
 			{
 				Name:        "new",
@@ -108,22 +108,52 @@ func (mod *TeamRoles) HandleDiscordCommand(s *discordgo.Session, i *discordgo.In
 		roleName := options[0].Options[0].StringValue()
 		err := validateUserCanJoinRoleByName(s, i.Interaction.Member.User, i.GuildID, roleName)
 		if err != nil {
-			content = err.Error()
+			content = fmt.Sprintf("⚠️ %s", err.Error())
 			break
 		}
-		role, err := createOrReturnRole(s, i.GuildID, roleName)
+		role, exists, err := createOrReturnRole(s, i.GuildID, roleName)
 		if err != nil {
-			content = err.Error()
+			content = fmt.Sprintf("⚠️ %s", err.Error())
 			break
 		}
 		err = s.GuildMemberRoleAdd(i.GuildID, i.Interaction.Member.User.ID, role.ID)
 		if err != nil {
-			content = err.Error()
+			content = fmt.Sprintf("⚠️ %s", err.Error())
 			break
 		}
-		content = fmt.Sprintln("🙌 Joined", role.Name)
+		if exists {
+			content = fmt.Sprintln("🤝 Joined existing", role.Name)
+		} else {
+			content = fmt.Sprintln("✨ Created", role.Name)
+		}
+
 	case "join":
 		// OOB check
+		if len(options[0].Options) < 0 {
+			content = "🤔 Please provide a team name."
+			break
+		}
+		if i.Interaction.GuildID == "" {
+			content = "😡 This command can only be used in a server."
+			break
+		}
+		role := options[0].Options[0].RoleValue(s, i.GuildID)
+		isTeam, _ := getTeamName(role.Name)
+		if !isTeam {
+			content = fmt.Sprintf("⚠️ %s. Stop that. <:ninja:449495170430533633>", ErrNotTeam)
+			break
+		}
+		err := validateUserCanJoinRole(s, i.Interaction.Member.User, i.GuildID, role)
+		if err != nil {
+			content = fmt.Sprintf("⚠️ %s", err.Error())
+			break
+		}
+		err = s.GuildMemberRoleAdd(i.GuildID, i.Interaction.Member.User.ID, role.ID)
+		if err != nil {
+			content = fmt.Sprintf("⚠️ %s", err.Error())
+			break
+		}
+		content = fmt.Sprintln("🤝 Joined", role.Name)
 	case "leave":
 		// OOB check
 		if len(options[0].Options) < 0 {
@@ -135,9 +165,9 @@ func (mod *TeamRoles) HandleDiscordCommand(s *discordgo.Session, i *discordgo.In
 			break
 		}
 		role := options[0].Options[0].RoleValue(s, i.GuildID)
-		isTeam := validateRoleIsTeam(role.Name)
+		isTeam, _ := getTeamName(role.Name)
 		if !isTeam {
-			content = fmt.Sprintf("⚠️ %s", ErrNotTeam)
+			content = fmt.Sprintf("⚠️ %s. Stop that. <:ninja:449495170430533633>", ErrNotTeam)
 			break
 		}
 		err := validateUserIsRoleMember(s, i.Interaction.Member.User, i.GuildID, role)
@@ -167,6 +197,7 @@ func (mod *TeamRoles) HandleDiscordCommand(s *discordgo.Session, i *discordgo.In
 func validateUserCanJoinRoleByName(s *discordgo.Session, u *discordgo.User, guild, targetRole string) error {
 	// This function validates that the given GuildMember satisfies the following rules:
 	// - is not already assigned to more than 5 Team Roles
+	// - is trying to join a team
 	// - is not already assigned to the given targetRole
 	var roleCount int
 	member, err := s.GuildMember(guild, u.ID)
@@ -178,17 +209,15 @@ func validateUserCanJoinRoleByName(s *discordgo.Session, u *discordgo.User, guil
 		if err != nil {
 			return err
 		}
-		// TODO This whole thing of matching on name sucks. Refactor me.
-		getRoleName := regexp.MustCompile(`(?i)^(?:Team):* ?(.*)`)
-		roleName := getRoleName.FindAllStringSubmatch(role.Name, -1)
+		isTeam, _ := getTeamName(role.Name)
 		// role names get normalized to lower case during the lookup only
-		if roleName != nil && strings.ToLower(roleName[0][1]) == strings.ToLower(targetRole) {
-			// The Member is already part of the given GuildRole!
-			return ErrAlreadyTeamMember
-		}
-		// Check if it's a team role, and if it is, add to the counter
-		if strings.HasPrefix(role.Name, "Team:") {
-			roleCount += 1
+		if isTeam {
+			if strings.ToLower(role.Name) == strings.ToLower(targetRole) {
+				// The Member is already part of the given GuildRole!
+				return ErrAlreadyTeamMember
+			}
+			// Check if it's a team role, and if it is, add to the counter
+			roleCount++
 		}
 	}
 	if roleCount >= config.RuntimeConfig.MaxUserRoles {
@@ -227,14 +256,18 @@ func validateUserIsRoleMember(s *discordgo.Session, u *discordgo.User, guild str
 	return ErrNotTeamMember
 }
 
-func validateRoleIsTeam(roleName string) (isTeam bool) {
-	getRoleName := regexp.MustCompile(`(?i)^(?:Team):* ?(.*)`)
-	return getRoleName.MatchString(roleName)
+func getTeamName(roleName string) (isTeam bool, team string) {
+	getRoleName := regexp.MustCompile(`(?i)^Team:* ?(.*)`)
+	teamName := getRoleName.FindAllStringSubmatch(roleName, -1)
+	if teamName != nil && teamName[0][1] != "" {
+		return true, teamName[0][1]
+	}
+	return false, ""
 }
 
-func createOrReturnRole(s *discordgo.Session, guild string, rname string) (v *discordgo.Role, err error) {
+func createOrReturnRole(s *discordgo.Session, guild string, rname string) (v *discordgo.Role, roleExisted bool, err error) {
 	roles, err := s.GuildRoles(guild)
-	getRole := regexp.MustCompile(`(?i)^(?:Team):*`)
+	getRole := regexp.MustCompile(`(?i)^Team:*`)
 	if !getRole.MatchString(rname) {
 		rname = fmt.Sprintln("Team:", rname)
 	}
@@ -243,12 +276,12 @@ func createOrReturnRole(s *discordgo.Session, guild string, rname string) (v *di
 		for _, v := range roles {
 			// role names get normalized to lower case during the lookup only
 			if strings.ToLower(v.Name) == strings.ToLower(rname) {
-				log.LogDebug("tying", rname, "to old role", v.Name)
-				return v, nil
+				log.LogDebugf("Tying %s to existing team role %s", rname, v.Name)
+				return v, true, nil
 			}
 		}
 		// couldn't find the role in our list, create it
-		log.LogDebug("tying", rname, "to new role", rname)
+		log.LogDebugf("Creating new team role %s", rname)
 		var rColour = 8290694
 		var rHoist = true
 		var rMentionable = true
@@ -263,7 +296,7 @@ func createOrReturnRole(s *discordgo.Session, guild string, rname string) (v *di
 			Icon:         nil,
 		}
 		role, err := s.GuildRoleCreate(guild, &rParams)
-		return role, err
+		return role, false, err
 	}
-	return nil, fmt.Errorf("problem creating the target role: %w", err)
+	return nil, false, fmt.Errorf("problem creating the target role: %w", err)
 }

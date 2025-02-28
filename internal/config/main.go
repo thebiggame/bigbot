@@ -33,7 +33,7 @@ func BindViperConfig() {
 	viper.BindEnv("AV.OBS.Hostname", "BIGBOT_AV_OBS_HOSTNAME")
 	viper.BindEnv("AV.OBS.Password", "BIGBOT_AV_OBS_PASSWORD")
 	viper.BindEnv("Log.Level", "BIGBOT_LOG_LEVEL")
-	viper.BindEnv("MaxUserRoles", "BIGBOT_MAX_USER_ROLES")
+	viper.BindEnv("MaxUserRoles", "BIGBOT_MAX_USER_TEAMS")
 	viper.BindEnv("RemoveCommands", "BIGBOT_REMOVE_COMMANDS")
 	return
 }
