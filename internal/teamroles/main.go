@@ -11,6 +11,10 @@ import (
 	"strings"
 )
 
+const (
+	teamRolePrefix = "Team:"
+)
+
 type TeamRoles struct {
 	discord *discordgo.Session
 	close   chan bool
@@ -247,7 +251,7 @@ func validateUserIsRoleMember(s *discordgo.Session, u *discordgo.User, guild str
 }
 
 func getTeamName(roleName string) (isTeam bool, team string) {
-	getRoleName := regexp.MustCompile(`(?i)^Team:* ?(.*)`)
+	getRoleName := regexp.MustCompile(`(?i)^` + teamRolePrefix + `* ?(.*)`)
 	teamName := getRoleName.FindAllStringSubmatch(roleName, -1)
 	if teamName != nil && teamName[0][1] != "" {
 		return true, teamName[0][1]
@@ -257,9 +261,9 @@ func getTeamName(roleName string) (isTeam bool, team string) {
 
 func createOrReturnRole(s *discordgo.Session, guild string, rname string) (v *discordgo.Role, roleExisted bool, err error) {
 	roles, err := s.GuildRoles(guild)
-	getRole := regexp.MustCompile(`(?i)^Team:*`)
-	if !getRole.MatchString(rname) {
-		rname = fmt.Sprintln("Team:", rname)
+	isRole, _ := getTeamName(rname)
+	if !isRole {
+		rname = fmt.Sprintln(teamRolePrefix, rname)
 	}
 	rname = strings.Replace(rname, "\n", "", -1)
 	if err == nil {

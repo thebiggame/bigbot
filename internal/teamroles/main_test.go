@@ -2,14 +2,11 @@ package teamroles
 
 import "testing"
 
-const (
-	tnValidPrefix = "Team: "
-)
-
 var teamNameValidTests map[string]string = map[string]string{
-	tnValidPrefix + "Test":   "Test",
-	tnValidPrefix + "Test Æ": "Test Æ",
-	tnValidPrefix + "✨":      "✨",
+	teamRolePrefix + " Test":               "Test",
+	teamRolePrefix + " Test Æ":             "Test Æ",
+	teamRolePrefix + " ✨":                  "✨",
+	teamRolePrefix + "MergedForSomeReason": "MergedForSomeReason",
 }
 
 var teamNameInvalidTests []string = []string{
