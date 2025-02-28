@@ -69,17 +69,12 @@ func New(discord *discordgo.Session) *TeamRoles {
 	}
 }
 
-func (mod *TeamRoles) Start(ctx context.Context) (err error) {
-	registeredCommands := make([]*discordgo.ApplicationCommand, len(commands))
-	for i, v := range commands {
-		cmd, err := mod.discord.ApplicationCommandCreate(mod.discord.State.User.ID, config.RuntimeConfig.Discord.GuildID, v)
-		if err != nil {
-			return fmt.Errorf("cannot create command '%v': %w", v.Name, err)
-		}
-		registeredCommands[i] = cmd
-	}
+func (mod *TeamRoles) DiscordCommands() ([]*discordgo.ApplicationCommand, error) {
+	return commands, nil
+}
 
-	// This module simply registers handlers, and does not need to continue running (so we don't need the context)
+func (mod *TeamRoles) Start(ctx context.Context) (err error) {
+	// This module simply registers handlers, and does not need to run continuously (so we don't need the context)
 	return ctx.Err()
 }
 

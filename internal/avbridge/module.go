@@ -2,10 +2,8 @@ package avbridge
 
 import (
 	"context"
-	"fmt"
 	"github.com/andreykaipov/goobs"
 	"github.com/bwmarrin/discordgo"
-	"github.com/thebiggame/bigbot/internal/config"
 	"sync"
 )
 
@@ -23,15 +21,11 @@ func New(discord *discordgo.Session) (bridge *AVBridge, err error) {
 	}, nil
 }
 
-func (mod *AVBridge) Start(ctx context.Context) (err error) {
-	registeredCommands := make([]*discordgo.ApplicationCommand, len(commands))
-	cmds, err := mod.discord.ApplicationCommandBulkOverwrite(mod.discord.State.User.ID, config.RuntimeConfig.Discord.GuildID, commands)
-	if err != nil {
-		// This shouldn't happen. Bail out
-		return fmt.Errorf("error creating commands: %w", err)
-	}
-	copy(registeredCommands, cmds)
+func (mod *AVBridge) DiscordCommands() ([]*discordgo.ApplicationCommand, error) {
+	return commands, nil
+}
 
+func (mod *AVBridge) Start(ctx context.Context) (err error) {
 	// goobsDaemon needs the close channel to be ready.
 	goobsCtx, goobsCancel := context.WithCancel(ctx)
 	var wg sync.WaitGroup

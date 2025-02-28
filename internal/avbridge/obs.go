@@ -70,6 +70,8 @@ func (mod *AVBridge) goobsDaemon(ctx context.Context) {
 				err = mod.goobsConnect()
 				if err != nil {
 					log.LogErrf("Failed to reconnect: %v", err)
+				} else {
+					log.LogInfof("Reconnected to OBS successfully")
 				}
 			}
 		case <-ctx.Done():

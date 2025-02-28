@@ -19,6 +19,7 @@ import (
 
 type BotModule interface {
 	Start(context context.Context) error
+	DiscordCommands() ([]*discordgo.ApplicationCommand, error)
 	HandleDiscordCommand(session *discordgo.Session, interaction *discordgo.InteractionCreate) (handled bool, err error)
 }
 
@@ -94,6 +95,40 @@ func (b *BigBot) handleDiscordCommand(s *discordgo.Session, i *discordgo.Interac
 
 }
 
+func (b *BigBot) registerCommands() (err error) {
+	var modCmds []*discordgo.ApplicationCommand
+	// Collate all slash commands.
+	for _, v := range b.modules {
+		modCmds, err = v.DiscordCommands()
+		if err != nil {
+			return err
+		}
+	}
+	// Write them out en masse to the guild.
+	cmds, err := b.DiscordSession.ApplicationCommandBulkOverwrite(b.DiscordSession.State.User.ID, config.RuntimeConfig.Discord.GuildID, modCmds)
+	if err != nil {
+		// This shouldn't happen. Bail out
+		return fmt.Errorf("error creating commands: %w", err)
+	}
+	// Write them to our understanding of the commands.
+	// We write here with the new command knowledge (from the ApplicationCommandBulkOverwrite) so that we can interact with them later (they'll have IDs).
+	copy(b.commands, cmds)
+	return nil
+}
+
+// TeardownCommands destroys all slash commands on the server associated with this run of the bot.
+func (b *BigBot) TeardownCommands() error {
+	for _, cmd := range b.commands {
+		err := b.DiscordSession.ApplicationCommandDelete(b.DiscordSession.State.User.ID, config.RuntimeConfig.Discord.GuildID, cmd.ID)
+		if err != nil {
+			return fmt.Errorf("error removing command %s: %w", cmd.Name, err)
+		}
+		log.LogDebugf("Removed command %s", cmd.Name)
+	}
+	log.LogInfo("Commands have been removed successfully.")
+	return nil
+}
+
 func (b *BigBot) Run() (err error) {
 	if config.RuntimeConfig.Discord.Token == "" {
 		return errors.New("no discord token provided")
@@ -108,6 +143,12 @@ func (b *BigBot) Run() (err error) {
 		return fmt.Errorf("error opening discord connection: %w", err)
 	}
 	defer b.DiscordSession.Close()
+
+	// Register all module slash commands.
+	err = b.registerCommands()
+	if err != nil {
+		return fmt.Errorf("error registering commands: %w", err)
+	}
 
 	// Create app context (this is passed to modules).
 	// The signal.NotifyContext is a special context that gets torn down when an interrupt / SIGTERM is received.
