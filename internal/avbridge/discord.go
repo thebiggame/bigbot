@@ -1,6 +1,10 @@
 package avbridge
 
-import "github.com/bwmarrin/discordgo"
+import (
+	"github.com/andreykaipov/goobs/api/requests/scenes"
+	"github.com/andreykaipov/goobs/api/requests/transitions"
+	"github.com/bwmarrin/discordgo"
+)
 
 var commands = []*discordgo.ApplicationCommand{
 	{
@@ -16,6 +20,11 @@ var commands = []*discordgo.ApplicationCommand{
 			{
 				Name:        "ftb",
 				Description: "📽️ Fade Projector Output to Black.",
+				Type:        discordgo.ApplicationCommandOptionSubCommand,
+			},
+			{
+				Name:        "infoboard",
+				Description: "📽️ Transition to Infoboard (the default projector display).",
 				Type:        discordgo.ApplicationCommandOptionSubCommand,
 			},
 		},
@@ -37,7 +46,91 @@ func (mod *AVBridge) HandleDiscordCommand(s *discordgo.Session, i *discordgo.Int
 			content = "🙅 OBS is **not connected.**"
 		}
 	case "ftb":
-		content = "_Fading to Black..._"
+		if !mod.goobsIsConnected() {
+			content = "🙅 OBS is **not connected.**"
+			break
+		}
+		err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Flags: discordgo.MessageFlagsEphemeral,
+			},
+		})
+		if err != nil {
+			return true, err
+		}
+
+		// Set preview scene to black...
+		_, err = mod.ws.Scenes.SetCurrentPreviewScene(&scenes.SetCurrentPreviewSceneParams{
+			SceneName: &sceneBlack,
+		})
+		if err != nil {
+			return true, err
+		}
+
+		// then transition to it.
+		_, err = mod.ws.Transitions.SetCurrentSceneTransition(&transitions.SetCurrentSceneTransitionParams{
+			TransitionName: &transitionFade,
+		})
+		if err != nil {
+			return true, err
+		}
+		_, err = mod.ws.Transitions.TriggerStudioModeTransition(&transitions.TriggerStudioModeTransitionParams{})
+		if err != nil {
+			return true, err
+		}
+
+		// Finally, confirm we did the thing.
+		_, err = s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+			Content: "_Fading to black..._",
+		})
+		if err != nil {
+			return true, err
+		}
+		return true, nil
+	case "infoboard":
+		if !mod.goobsIsConnected() {
+			content = "🙅 OBS is **not connected.**"
+			break
+		}
+		err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Flags: discordgo.MessageFlagsEphemeral,
+			},
+		})
+		if err != nil {
+			return true, err
+		}
+
+		// Set preview scene to Infoboard...
+		_, err = mod.ws.Scenes.SetCurrentPreviewScene(&scenes.SetCurrentPreviewSceneParams{
+			SceneName: &sceneDefault,
+		})
+		if err != nil {
+			return true, err
+		}
+
+		// then transition to it.
+		_, err = mod.ws.Transitions.SetCurrentSceneTransition(&transitions.SetCurrentSceneTransitionParams{
+			TransitionName: &transitionStinger,
+		})
+		if err != nil {
+			return true, err
+		}
+		_, err = mod.ws.Transitions.TriggerStudioModeTransition(&transitions.TriggerStudioModeTransitionParams{})
+		if err != nil {
+			return true, err
+		}
+
+		// Finally, confirm we did the thing.
+		_, err = s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+			Content: "Switched to Infoboard.",
+		})
+		if err != nil {
+			return true, err
+		}
+		return true, nil
 	default:
 		content = "😶 Please use a sub-command."
 	}

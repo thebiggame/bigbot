@@ -25,14 +25,12 @@ func New(discord *discordgo.Session) (bridge *AVBridge, err error) {
 
 func (mod *AVBridge) Start(ctx context.Context) (err error) {
 	registeredCommands := make([]*discordgo.ApplicationCommand, len(commands))
-	for i, v := range commands {
-		cmd, err := mod.discord.ApplicationCommandCreate(mod.discord.State.User.ID, config.RuntimeConfig.Discord.GuildID, v)
-		if err != nil {
-			// This shouldn't happen. Bail out
-			return fmt.Errorf("error creating command '%v': %w", v.Name, err)
-		}
-		registeredCommands[i] = cmd
+	cmds, err := mod.discord.ApplicationCommandBulkOverwrite(mod.discord.State.User.ID, config.RuntimeConfig.Discord.GuildID, commands)
+	if err != nil {
+		// This shouldn't happen. Bail out
+		return fmt.Errorf("error creating commands: %w", err)
 	}
+	copy(registeredCommands, cmds)
 
 	// goobsDaemon needs the close channel to be ready.
 	goobsCtx, goobsCancel := context.WithCancel(ctx)
