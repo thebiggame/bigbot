@@ -14,7 +14,7 @@ FROM scratch
 
 WORKDIR /app
 
-COPY --from=build /go/src/github.com/thebiggame/bigbot/main .
+COPY --from=build /go/src/github.com/thebiggame/bigbot/main ./bigbot
 COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 
-CMD ["/app/main"]
+CMD ["/app/bigbot"]

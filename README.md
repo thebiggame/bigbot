@@ -23,7 +23,7 @@ Usage:
 
 Via docker:
 ```
-docker run -d --restart=always --name bigbot thebiggame/bigbot /app/main run --serve-wan
+docker run -d --restart=always --name bigbot thebiggame/bigbot /app/bigbot run --serve-wan
 ```
 
 Or local install:
