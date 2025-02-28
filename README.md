@@ -1,5 +1,6 @@
 # thebiggame/BIGbot
-<img align="right" alt="BIGbot logo" src="assets/logo.png" width="200">
+<img align="right" alt="BIGbot logo" src="assets/logo.png" width="200"/>
+
 A simple discord bot written in [Go](https://golang.org/).
 
 _BIGbot_ does many things. It is:
