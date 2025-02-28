@@ -23,27 +23,40 @@ Usage:
 
 Via docker:
 ```
-docker run -d --restart=always --name bigbot thebiggame/bigbot /app/main run --wan
+docker run -d --restart=always --name bigbot thebiggame/bigbot /app/main run --serve-wan
 ```
 
 Or local install:
 ```
 ~$ bigbot run
-Usage:
-  bigbot run [flags]
+Usage: bigbot run --serve-lan --serve-wan --discord.token=STRING [flags]
+
+Run BIGbot.
 
 Flags:
-  -h, --help   help for run
-      --lan    Serve the LAN portion of the bot.
-      --wan    Serve the WAN portion of the bot.
+  -h, --help                      Show context-sensitive help.
+      --config=CONFIG-FLAG        Location of config ($BIGBOT_CONFIG)
+  -l, --log-level="info"          Set the logging level
+                                  (debug|info|warn|error|fatal)
+                                  ($BIGBOT_LOG_LEVEL)
 
-Global Flags:
-      --config string      config file (default is ./bigbot.yaml)
-      --log.level string   Log level (debug, info, warn, error, fatal) (default "info")
+  -t, --discord.token=STRING      Discord bot token ($BIGBOT_DISCORD_TOKEN)
+      --discord.guild-id=""       Discord guild ID to monitor
+                                  ($BIGBOT_DISCORD_GUILD)
+      --av.obs.hostname=""        OBS Host ($BIGBOT_AV_OBS_HOST)
+      --av.obs.password=""        OBS password ($BIGBOT_AV_OBS_PASSWORD)
+      --teams.max-user-teams=5    Maximum number of teams a User can join
+                                  ($BIGBOT_MAX_USER_ROLES)
+      --remove-commands           Remove commands on shutdown
+                                  ($BIGBOT_COMMANDS_REMOVE)
+
+serve
+  --serve-lan    Serve the LAN portion of the bot.
+  --serve-wan    Serve the WAN portion of the bot.
 ```
 Example:
 ```sh
-bigbot run --wan
+bigbot run --serve-wan -t=[discord-token]
 ```
 ```
 2018/03/18 18:09:18 Running on servers:

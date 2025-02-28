@@ -210,7 +210,7 @@ func validateUserCanJoinRoleByName(s *discordgo.Session, u *discordgo.User, guil
 			roleCount++
 		}
 	}
-	if roleCount >= config.RuntimeConfig.MaxUserRoles {
+	if roleCount >= config.RuntimeConfig.Teams.MaxUserTeams {
 		// Joining this Role would take the user over their limit
 		return ErrMaxTeamsReached
 	}
