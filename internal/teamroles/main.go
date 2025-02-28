@@ -266,12 +266,12 @@ func createOrReturnRole(s *discordgo.Session, guild string, rname string) (v *di
 		for _, v := range roles {
 			// role names get normalized to lower case during the lookup only
 			if strings.ToLower(v.Name) == strings.ToLower(rname) {
-				log.LogDebugf("Tying %s to existing team role %s", rname, v.Name)
+				log.Debugf("Tying %s to existing team role %s", rname, v.Name)
 				return v, true, nil
 			}
 		}
 		// couldn't find the role in our list, create it
-		log.LogDebugf("Creating new team role %s", rname)
+		log.Debugf("Creating new team role %s", rname)
 		var rColour = 8290694
 		var rHoist = true
 		var rMentionable = true

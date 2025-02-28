@@ -13,52 +13,62 @@ func init() {
 	Logger = log.New(os.Stdout, "", log.LstdFlags)
 }
 
-func LogDebug(v ...interface{}) {
+func Trace(v ...interface{}) {
+	fa := "[TRACE] "
+	v = append([]interface{}{fa}, v...)
+	Logger.Print(v...)
+}
+
+func Tracef(format string, v ...interface{}) {
+	Trace(fmt.Sprintf(format, v...))
+}
+
+func Debug(v ...interface{}) {
 	fa := "[DEBUG] "
 	v = append([]interface{}{fa}, v...)
 	Logger.Print(v...)
 }
 
-func LogDebugf(format string, v ...interface{}) {
-	LogDebug(fmt.Sprintf(format, v...))
+func Debugf(format string, v ...interface{}) {
+	Debug(fmt.Sprintf(format, v...))
 }
 
-func LogWarn(v ...interface{}) {
+func Warn(v ...interface{}) {
 	fa := "[WARN] "
 	v = append([]interface{}{fa}, v...)
 	Logger.Print(v...)
 }
 
-func LogWarnf(format string, v ...interface{}) {
-	LogWarn(fmt.Sprintf(format, v...))
+func Warnf(format string, v ...interface{}) {
+	Warn(fmt.Sprintf(format, v...))
 }
 
-func LogInfo(v ...interface{}) {
+func Info(v ...interface{}) {
 	fa := "[INFO] "
 	v = append([]interface{}{fa}, v...)
 	Logger.Print(v...)
 }
 
-func LogInfof(format string, v ...interface{}) {
-	LogInfo(fmt.Sprintf(format, v...))
+func Infof(format string, v ...interface{}) {
+	Info(fmt.Sprintf(format, v...))
 }
 
-func LogErr(v ...interface{}) {
+func Error(v ...interface{}) {
 	fa := "[ERROR] "
 	v = append([]interface{}{fa}, v...)
 	Logger.Print(v...)
 }
 
-func LogErrf(format string, v ...interface{}) {
-	LogErr(fmt.Sprintf(format, v...))
+func Errorf(format string, v ...interface{}) {
+	Error(fmt.Sprintf(format, v...))
 }
 
-func LogFatal(v ...interface{}) {
+func Fatal(v ...interface{}) {
 	fa := "[FATAL] "
 	v = append([]interface{}{fa}, v...)
 	Logger.Print(v...)
 }
 
-func LogFatalf(format string, v ...interface{}) {
-	LogFatal(fmt.Sprintf(format, v...))
+func Fatalf(format string, v ...interface{}) {
+	Fatal(fmt.Sprintf(format, v...))
 }

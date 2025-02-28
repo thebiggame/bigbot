@@ -49,7 +49,7 @@ func initConfig() {
 	viper.AutomaticEnv()
 
 	if err := viper.ReadInConfig(); err == nil {
-		log.LogInfo("Using config file:", viper.ConfigFileUsed())
+		log.Info("Using config file:", viper.ConfigFileUsed())
 	}
 
 	config.BindViperConfig()

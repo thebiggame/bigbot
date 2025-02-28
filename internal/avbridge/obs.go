@@ -23,7 +23,7 @@ func (mod *AVBridge) goobsConnect() (err error) {
 			return err
 		}
 		if mod.goobsIsConnected() {
-			log.LogInfo("OBS connected.")
+			log.Info("OBS connected.")
 		}
 	}
 	return nil
@@ -60,7 +60,7 @@ func (mod *AVBridge) goobsIsConnected() bool {
 func (mod *AVBridge) goobsDaemon(ctx context.Context) {
 	err := mod.goobsConnect()
 	if err != nil {
-		log.LogErrf("Error connecting to OBS: %s", err)
+		log.Errorf("Error connecting to OBS: %s", err)
 	}
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
@@ -68,21 +68,21 @@ func (mod *AVBridge) goobsDaemon(ctx context.Context) {
 		select {
 		case <-ticker.C:
 			if !mod.goobsIsConnected() {
-				log.LogInfof("OBS disconnected, attempting to reconnect...")
+				log.Infof("OBS disconnected, attempting to reconnect...")
 				err = mod.goobsConnect()
 				if err != nil {
-					log.LogErrf("Failed to reconnect: %v", err)
+					log.Errorf("Failed to reconnect: %v", err)
 				} else {
-					log.LogInfof("Reconnected to OBS successfully")
+					log.Infof("Reconnected to OBS successfully")
 				}
 			}
 		case <-ctx.Done():
 			if mod.ws != nil {
 				err := mod.goobsDisconnect()
 				if err != nil {
-					log.LogErrf("Error during disconnect: %v", err)
+					log.Errorf("Error during disconnect: %v", err)
 				}
-				log.LogInfof("OBS disconnected gracefully.")
+				log.Infof("OBS disconnected gracefully.")
 			}
 			return
 		}

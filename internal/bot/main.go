@@ -77,7 +77,7 @@ func (b *BigBot) handleDiscordCommand(s *discordgo.Session, i *discordgo.Interac
 				return
 			}
 			if handled {
-				log.LogDebugf("Module %s handled command %v", reflect.TypeOf(m).Elem().Name(), i.ApplicationCommandData().Name)
+				log.Debugf("Module %s handled command %v", reflect.TypeOf(m).Elem().Name(), i.ApplicationCommandData().Name)
 			}
 		}(&m)
 	}
@@ -123,9 +123,9 @@ func (b *BigBot) TeardownCommands() error {
 		if err != nil {
 			return fmt.Errorf("error removing command %s: %w", cmd.Name, err)
 		}
-		log.LogDebugf("Removed command %s", cmd.Name)
+		log.Debugf("Removed command %s", cmd.Name)
 	}
-	log.LogInfo("Commands have been removed successfully.")
+	log.Info("Commands have been removed successfully.")
 	return nil
 }
 
@@ -135,7 +135,7 @@ func (b *BigBot) Run() (err error) {
 	}
 
 	b.DiscordSession.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
-		log.LogInfof("Logged in as: %v#%v", s.State.User.Username, s.State.User.Discriminator)
+		log.Infof("Logged in as: %v#%v", s.State.User.Username, s.State.User.Discriminator)
 	})
 
 	err = b.DiscordSession.Open()
@@ -163,7 +163,7 @@ func (b *BigBot) Run() (err error) {
 		g.Go(func() error {
 			err := module.Start(gCtx)
 			if err != nil && !errors.Is(err, context.Canceled) {
-				log.LogErrf("error with module %v: %v", reflect.TypeOf(module), err)
+				log.Errorf("error with module %v: %v", reflect.TypeOf(module), err)
 			}
 			return err
 		})
@@ -172,29 +172,29 @@ func (b *BigBot) Run() (err error) {
 	b.DiscordSession.AddHandler(b.handleDiscordCommand)
 
 	guilds, err := b.DiscordSession.UserGuilds(100, "", "", false)
-	log.LogInfo("Running on servers:")
+	log.Info("Running on servers:")
 	if len(guilds) == 0 {
-		log.LogInfo("\t(none)")
+		log.Info("\t(none)")
 	} else {
 		for index := range guilds {
 			guild := guilds[index]
-			log.LogInfo("\t", guild.Name, " (", guild.ID, ")")
+			log.Info("\t", guild.Name, " (", guild.ID, ")")
 		}
 	}
 
-	log.LogInfof("Join URL: https://discordapp.com/api/oauth2/authorize?scope=bot&permissions=268446720&client_id=%s", b.DiscordSession.State.User.ID)
-	log.LogInfo("Bot running. CTRL-C to exit.")
+	log.Infof("Join URL: https://discordapp.com/api/oauth2/authorize?scope=bot&permissions=268446720&client_id=%s", b.DiscordSession.State.User.ID)
+	log.Info("Bot running. CTRL-C to exit.")
 
 	// Await app context completion (i.e usually a SIGTERM / interrupt).
 	<-ctx.Done()
 
-	log.LogInfo("Bot stopping...")
+	log.Info("Bot stopping...")
 
 	// Closedown the context.
 	if closeErr := g.Wait(); closeErr == nil || errors.Is(closeErr, context.Canceled) {
-		log.LogInfo("Bot stopped gracefully.")
+		log.Info("Bot stopped gracefully.")
 	} else {
-		log.LogWarn("Error during shutdown: %v", closeErr)
+		log.Warn("Error during shutdown: %v", closeErr)
 	}
 	return
 
