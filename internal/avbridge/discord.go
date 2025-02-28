@@ -94,9 +94,7 @@ func (mod *AVBridge) discordCommandAVFTB(s *discordgo.Session, i *discordgo.Inte
 	}
 
 	// Finally, confirm we did the thing.
-	_, err = s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
-		Content: "_Fading to black..._",
-	})
+	_, err = helpers.DiscordInteractionFollowupMessage(s, i, "_Fading to black_...")
 	return err
 }
 
@@ -122,9 +120,7 @@ func (mod *AVBridge) discordCommandAVInfoboard(s *discordgo.Session, i *discordg
 	}
 
 	// Finally, confirm we did the thing.
-	_, err = s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
-		Content: "Switched to Infoboard.",
-	})
+	_, err = helpers.DiscordInteractionFollowupMessage(s, i, "Switched to Infoboard.")
 	return err
 }
 

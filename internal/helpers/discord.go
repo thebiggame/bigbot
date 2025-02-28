@@ -20,3 +20,9 @@ func DiscordInteractionEphemeralResponse(s *discordgo.Session, i *discordgo.Inte
 		},
 	})
 }
+
+func DiscordInteractionFollowupMessage(s *discordgo.Session, i *discordgo.InteractionCreate, content string) (*discordgo.Message, error) {
+	return s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+		Content: content,
+	})
+}
