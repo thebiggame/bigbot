@@ -99,9 +99,12 @@ func (b *BigBot) registerCommands() (err error) {
 	var modCmds []*discordgo.ApplicationCommand
 	// Collate all slash commands.
 	for _, v := range b.modules {
-		modCmds, err = v.DiscordCommands()
+		mC, err := v.DiscordCommands()
 		if err != nil {
 			return err
+		}
+		for _, cmd := range mC {
+			modCmds = append(modCmds, cmd)
 		}
 	}
 	// Write them out en masse to the guild.
