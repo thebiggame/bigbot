@@ -7,13 +7,13 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/thebiggame/bigbot/internal/avbridge"
 	"github.com/thebiggame/bigbot/internal/config"
+	"github.com/thebiggame/bigbot/internal/helpers"
 	log "github.com/thebiggame/bigbot/internal/log"
 	"github.com/thebiggame/bigbot/internal/teamroles"
 	"golang.org/x/sync/errgroup"
 	"os"
 	"os/signal"
 	"reflect"
-	"sync"
 	"syscall"
 )
 
@@ -65,32 +65,37 @@ func (b *BigBot) WithLANModules() *BigBot {
 }
 
 func (b *BigBot) handleDiscordCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	var wg sync.WaitGroup
-	errorChan := make(chan error, len(b.modules))
+	g := new(errgroup.Group)
 	for _, m := range b.modules {
-		wg.Add(1)
-		go func(mod *BotModule) {
-			defer wg.Done()
+		g.Go(func() error {
 			handled, err := m.HandleDiscordCommand(s, i)
-			if err != nil {
-				errorChan <- err
-				return
-			}
 			if handled {
 				log.Debugf("Module %s handled command %v", reflect.TypeOf(m).Elem().Name(), i.ApplicationCommandData().Name)
 			}
-		}(&m)
+			return err
+		})
 	}
-	wg.Wait()
-	for range errorChan {
-		err := <-errorChan
-		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+	if err := g.Wait(); err != nil {
+		// Error occurred.
+		log.Error(err)
+		log.Debugf("Error occurred while processing: %s", i.Interaction.Data)
+		// Figure out how to report it.
+		var content string
+		if IsCrew, err := helpers.UserIsCrew(s, i.GuildID, i.Member.User); err != nil && IsCrew {
+			content = fmt.Sprintf("🚫 **An error occurred while processing your command:**\n```%s```", err)
+		} else {
+			content = "🚫 **An error occurred while processing your command. Please contact a member of theBIGGAME Crew.**"
+		}
+		err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
-				Content: err.Error(),
+				Content: content,
 				Flags:   discordgo.MessageFlagsEphemeral,
 			},
 		})
+		if err != nil {
+			log.Errorf("Error returning log to client for slash command: %v", err)
+		}
 	}
 
 }
