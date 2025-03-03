@@ -94,6 +94,10 @@ func (mod *AVBridge) HandleDiscordCommand(s *discordgo.Session, i *discordgo.Int
 		}
 		return true, mod.discordCommandAVInfoboard(s, i)
 	case "alert":
+		// Let the client know we're working on it.
+		if helpers.DiscordDeferEphemeralInteraction(s, i) != nil {
+			return true, err
+		}
 		optionMap := make(map[string]*discordgo.ApplicationCommandInteractionDataOption, len(options))
 		for _, opt := range options[0].Options {
 			optionMap[opt.Name] = opt
@@ -111,13 +115,15 @@ func (mod *AVBridge) HandleDiscordCommand(s *discordgo.Session, i *discordgo.Int
 		if err != nil {
 			return true, err
 		}
-		return true, helpers.DiscordInteractionEphemeralResponse(s, i, "Alert Fired.")
+		_, err = helpers.DiscordInteractionFollowupMessage(s, i, "Alert Fired. Go be an attention whore!")
+		return true, err
 	case "alert-end":
 		err := nodecg.MessageSend(*mod.ctx, "alert-end", nil)
 		if err != nil {
 			return true, err
 		}
-		return true, helpers.DiscordInteractionEphemeralResponse(s, i, "Alert Rescinded.")
+		_, err = helpers.DiscordInteractionFollowupMessage(s, i, "Alert Revoked.")
+		return true, err
 	}
 
 	// Not handled by specific handler function, respond with content data.
