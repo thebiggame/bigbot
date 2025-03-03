@@ -12,6 +12,11 @@ type Config struct {
 			Hostname string `long:"host" help:"OBS Host" default:"" env:"HOST"`
 			Password string `long:"password" help:"OBS password" default:"" env:"PASSWORD"`
 		} `prefix:"obs." embed:"" envprefix:"OBS_"`
+		NodeCG struct {
+			Hostname          string `long:"host" help:"NodeCG Host" default:"" env:"HOST"`
+			BundleName        string `long:"bundle" help:"NodeCG bundle name" default:"thebiggame" env:"BUNDLE"`
+			AuthenticationKey string `long:"key" help:"Authentication key" default:"" env:"AUTHKEY"`
+		} `prefix:"nodecg." embed:"" envprefix:"NODECG_"`
 	} `prefix:"av." embed:"" envprefix:"AV_"`
 	Teams struct {
 		MaxUserTeams int `long:"maxUserRoles" default:"5" help:"Maximum number of teams a User can join" env:"MAX_USER_ROLES"`

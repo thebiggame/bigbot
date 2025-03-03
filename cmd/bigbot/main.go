@@ -25,10 +25,7 @@ func main() {
 		kong.ConfigureHelp(kong.HelpOptions{
 			Compact: true,
 		}),
-		kong.Configuration(kongyaml.Loader, "/etc/bigbot.yaml", "./bigbot.yaml"),
-		kong.Vars{
-			"version": "TEST",
-		})
+		kong.Configuration(kongyaml.Loader, "/etc/bigbot.yaml", "./bigbot.yaml"))
 	err := ctx.Run(&cli.Globals)
 	ctx.FatalIfErrorf(err)
 }

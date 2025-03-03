@@ -13,6 +13,9 @@ type AVBridge struct {
 	ws *goobs.Client
 	// You MUST hold a read on wsMtx before using ws.
 	wsMtx sync.RWMutex
+
+	// The context given to us by the main bot.
+	ctx *context.Context
 }
 
 func New(discord *discordgo.Session) (bridge *AVBridge, err error) {
@@ -26,6 +29,7 @@ func (mod *AVBridge) DiscordCommands() ([]*discordgo.ApplicationCommand, error) 
 }
 
 func (mod *AVBridge) Start(ctx context.Context) (err error) {
+	mod.ctx = &ctx
 	// goobsDaemon needs the close channel to be ready.
 	goobsCtx, goobsCancel := context.WithCancel(ctx)
 	var wg sync.WaitGroup

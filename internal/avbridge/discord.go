@@ -5,6 +5,7 @@ import (
 	"github.com/andreykaipov/goobs/api/requests/transitions"
 	"github.com/bwmarrin/discordgo"
 	"github.com/thebiggame/bigbot/internal/helpers"
+	"github.com/thebiggame/bigbot/pkg/nodecg"
 )
 
 var commands = []*discordgo.ApplicationCommand{
@@ -12,6 +13,7 @@ var commands = []*discordgo.ApplicationCommand{
 		Name:                     "av",
 		Description:              "📽️ Manage the AV setup (you must be a crew member)",
 		DefaultMemberPermissions: &defaultAVCommandPermissions,
+		DMPermission:             &defaultAVCommandDMPermissions,
 		Options: []*discordgo.ApplicationCommandOption{
 			{
 				Name:        "status",
@@ -26,6 +28,31 @@ var commands = []*discordgo.ApplicationCommand{
 			{
 				Name:        "infoboard",
 				Description: "📽️ Transition to Infoboard (the default projector display).",
+				Type:        discordgo.ApplicationCommandOptionSubCommand,
+			},
+			{
+				Name:        "alert",
+				Description: "🔔 Sound an Alert on the AV system.",
+				Type:        discordgo.ApplicationCommandOptionSubCommand,
+				Options: []*discordgo.ApplicationCommandOption{
+					{
+						Type:        discordgo.ApplicationCommandOptionBoolean,
+						Name:        "flair",
+						Description: "Whether the alert should arrive with 'flair'. WARNING - this makes noise!",
+						Required:    true,
+					},
+					{
+						Type:        discordgo.ApplicationCommandOptionString,
+						Name:        "name",
+						Description: "A short description of why you want people's attention.",
+						Required:    true,
+						MaxLength:   50,
+					},
+				},
+			},
+			{
+				Name:        "alert-end",
+				Description: "🔕 End the Alert early.",
 				Type:        discordgo.ApplicationCommandOptionSubCommand,
 			},
 		},
@@ -66,6 +93,31 @@ func (mod *AVBridge) HandleDiscordCommand(s *discordgo.Session, i *discordgo.Int
 			return true, err
 		}
 		return true, mod.discordCommandAVInfoboard(s, i)
+	case "alert":
+		optionMap := make(map[string]*discordgo.ApplicationCommandInteractionDataOption, len(options))
+		for _, opt := range options[0].Options {
+			optionMap[opt.Name] = opt
+		}
+		name := "Pay Attention!"
+		var flair bool
+
+		if optionMap["name"] != nil {
+			name = optionMap["name"].StringValue()
+		}
+		if optionMap["flair"] != nil {
+			flair = optionMap["flair"].BoolValue()
+		}
+		err := nodecg.MessageSend(*mod.ctx, "alert", ngtbgNodeCGMessageAlert{Name: name, Flair: flair})
+		if err != nil {
+			return true, err
+		}
+		return true, helpers.DiscordInteractionEphemeralResponse(s, i, "Alert Fired.")
+	case "alert-end":
+		err := nodecg.MessageSend(*mod.ctx, "alert-end", nil)
+		if err != nil {
+			return true, err
+		}
+		return true, helpers.DiscordInteractionEphemeralResponse(s, i, "Alert Rescinded.")
 	}
 
 	// Not handled by specific handler function, respond with content data.
@@ -125,3 +177,4 @@ func (mod *AVBridge) discordCommandAVInfoboard(s *discordgo.Session, i *discordg
 }
 
 var defaultAVCommandPermissions int64 = discordgo.PermissionAdministrator
+var defaultAVCommandDMPermissions = false
