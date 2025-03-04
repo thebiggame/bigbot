@@ -46,7 +46,7 @@ var commands = []*discordgo.ApplicationCommand{
 						Name:        "name",
 						Description: "A short description of why you want people's attention.",
 						Required:    true,
-						MaxLength:   50,
+						MaxLength:   40,
 					},
 				},
 			},
@@ -54,6 +54,41 @@ var commands = []*discordgo.ApplicationCommand{
 				Name:        "alert-end",
 				Description: "🔕 End the Alert early.",
 				Type:        discordgo.ApplicationCommandOptionSubCommand,
+			},
+			{
+				Name:        "schedule",
+				Description: "📆 Update the Now & Next display.",
+				Type:        discordgo.ApplicationCommandOptionSubCommandGroup,
+				Options: []*discordgo.ApplicationCommandOption{
+					{
+						Type:        discordgo.ApplicationCommandOptionSubCommand,
+						Name:        "now",
+						Description: "Set the CURRENT event.",
+						Options: []*discordgo.ApplicationCommandOption{
+							{
+								Type:        discordgo.ApplicationCommandOptionString,
+								Name:        "name",
+								Description: "A brief description of the event.",
+								Required:    true,
+								MaxLength:   100,
+							},
+						},
+					},
+					{
+						Type:        discordgo.ApplicationCommandOptionSubCommand,
+						Name:        "next",
+						Description: "Set the NEXT event.",
+						Options: []*discordgo.ApplicationCommandOption{
+							{
+								Type:        discordgo.ApplicationCommandOptionString,
+								Name:        "name",
+								Description: "A brief description of the event. Leave blank to show no upcoming event.",
+								Required:    false,
+								MaxLength:   100,
+							},
+						},
+					},
+				},
 			},
 		},
 	},
@@ -124,6 +159,37 @@ func (mod *AVBridge) HandleDiscordCommand(s *discordgo.Session, i *discordgo.Int
 		}
 		_, err = helpers.DiscordInteractionFollowupMessage(s, i, "Alert Revoked.")
 		return true, err
+	case "schedule":
+		if helpers.DiscordDeferEphemeralInteraction(s, i) != nil {
+			return true, err
+		}
+		switch options[0].Options[0].Name {
+		case "now":
+			// Set the "now" display.
+			err := nodecg.ReplicantSet(*mod.ctx, "schedule:now", options[0].Options[0].Options[0].StringValue())
+			if err != nil {
+				return true, err
+			}
+			_, err = helpers.DiscordInteractionFollowupMessage(s, i, "👍 Schedule updated.")
+			return true, err
+		case "next":
+			// Set the "next" display.
+			// Need to do a bounds check against the options.
+			optionMap := make(map[string]*discordgo.ApplicationCommandInteractionDataOption, len(options))
+			for _, opt := range options[0].Options[0].Options {
+				optionMap[opt.Name] = opt
+			}
+			var newEventValue string
+			if optionMap["name"] != nil {
+				newEventValue = optionMap["name"].StringValue()
+			}
+			err := nodecg.ReplicantSet(*mod.ctx, "schedule:next", newEventValue)
+			if err != nil {
+				return true, err
+			}
+			_, err = helpers.DiscordInteractionFollowupMessage(s, i, "👍 Schedule updated.")
+			return true, err
+		}
 	}
 
 	// Not handled by specific handler function, respond with content data.
