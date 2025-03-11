@@ -56,6 +56,25 @@ var commands = []*discordgo.ApplicationCommand{
 				Type:        discordgo.ApplicationCommandOptionSubCommand,
 			},
 			{
+				Name:        "announcement",
+				Description: "🔔 Send an Announcement to all attendees. (This makes noise!)",
+				Type:        discordgo.ApplicationCommandOptionSubCommand,
+				Options: []*discordgo.ApplicationCommandOption{
+					{
+						Type:        discordgo.ApplicationCommandOptionString,
+						Name:        "name",
+						Description: "A description of what's happening.",
+						Required:    true,
+						MaxLength:   200,
+					},
+				},
+			},
+			{
+				Name:        "announcement-end",
+				Description: "🔕 End the Announcement (return to normal service).",
+				Type:        discordgo.ApplicationCommandOptionSubCommand,
+			},
+			{
 				Name:        "schedule",
 				Description: "📆 Update the Now & Next display.",
 				Type:        discordgo.ApplicationCommandOptionSubCommandGroup,
@@ -159,6 +178,46 @@ func (mod *AVBridge) HandleDiscordCommand(s *discordgo.Session, i *discordgo.Int
 		}
 		_, err = helpers.DiscordInteractionFollowupMessage(s, i, "Alert Revoked.")
 		return true, err
+	case "announcement":
+		// Let the client know we're working on it.
+		if helpers.DiscordDeferEphemeralInteraction(s, i) != nil {
+			return true, err
+		}
+		optionMap := make(map[string]*discordgo.ApplicationCommandInteractionDataOption, len(options))
+		for _, opt := range options[0].Options {
+			optionMap[opt.Name] = opt
+		}
+		name := "This is a service update from tBG Crew."
+
+		if optionMap["name"] != nil {
+			name = optionMap["name"].StringValue()
+		}
+
+		// First set the information body.
+		err := nodecg.ReplicantSet(*mod.ctx, "event:info:body", name)
+		if err != nil {
+			return true, err
+		}
+
+		// Then set it to active (plays the announcement chime & displays it)
+		err = nodecg.ReplicantSet(*mod.ctx, "event:info:active", true)
+		if err != nil {
+			return true, err
+		}
+
+		_, err = helpers.DiscordInteractionFollowupMessage(s, i, "ℹ Information is being displayed.")
+		return true, err
+	case "announcement-end":
+		// Let the client know we're working on it.
+		if helpers.DiscordDeferEphemeralInteraction(s, i) != nil {
+			return true, err
+		}
+		err := nodecg.ReplicantSet(*mod.ctx, "event:info:active", false)
+		if err != nil {
+			return true, err
+		}
+		_, err = helpers.DiscordInteractionFollowupMessage(s, i, "ℹ Information update removed.")
+		return true, err
 	case "schedule":
 		if helpers.DiscordDeferEphemeralInteraction(s, i) != nil {
 			return true, err
@@ -173,6 +232,10 @@ func (mod *AVBridge) HandleDiscordCommand(s *discordgo.Session, i *discordgo.Int
 			_, err = helpers.DiscordInteractionFollowupMessage(s, i, "👍 Schedule updated.")
 			return true, err
 		case "next":
+			// Let the client know we're working on it.
+			if helpers.DiscordDeferEphemeralInteraction(s, i) != nil {
+				return true, err
+			}
 			// Set the "next" display.
 			// Need to do a bounds check against the options.
 			optionMap := make(map[string]*discordgo.ApplicationCommandInteractionDataOption, len(options))
