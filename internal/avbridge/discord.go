@@ -4,6 +4,7 @@ import (
 	"github.com/andreykaipov/goobs/api/requests/scenes"
 	"github.com/andreykaipov/goobs/api/requests/transitions"
 	"github.com/bwmarrin/discordgo"
+	"github.com/thebiggame/bigbot/internal/avbridge/ngtbg"
 	"github.com/thebiggame/bigbot/internal/helpers"
 	"github.com/thebiggame/bigbot/pkg/nodecg"
 )
@@ -165,14 +166,14 @@ func (mod *AVBridge) HandleDiscordCommand(s *discordgo.Session, i *discordgo.Int
 		if optionMap["flair"] != nil {
 			flair = optionMap["flair"].BoolValue()
 		}
-		err := nodecg.MessageSend(*mod.ctx, "alert", ngtbgNodeCGMessageAlert{Name: name, Flair: flair})
+		err := nodecg.MessageSend(*mod.ctx, ngtbg.NodeCGMessageChannelAlert, ngtbg.NodeCGMessageAlert{Name: name, Flair: flair})
 		if err != nil {
 			return true, err
 		}
 		_, err = helpers.DiscordInteractionFollowupMessage(s, i, "Alert Fired. Go be an attention whore!")
 		return true, err
 	case "alert-end":
-		err := nodecg.MessageSend(*mod.ctx, "alert-end", nil)
+		err := nodecg.MessageSend(*mod.ctx, ngtbg.NodeCGMessageChannelAlertEnd, nil)
 		if err != nil {
 			return true, err
 		}
@@ -194,13 +195,13 @@ func (mod *AVBridge) HandleDiscordCommand(s *discordgo.Session, i *discordgo.Int
 		}
 
 		// First set the information body.
-		err := nodecg.ReplicantSet(*mod.ctx, "event:info:body", name)
+		err := nodecg.ReplicantSet(*mod.ctx, ngtbg.NodeCGReplicantEventInfoBody, name)
 		if err != nil {
 			return true, err
 		}
 
 		// Then set it to active (plays the announcement chime & displays it)
-		err = nodecg.ReplicantSet(*mod.ctx, "event:info:active", true)
+		err = nodecg.ReplicantSet(*mod.ctx, ngtbg.NodeCGReplicantEventInfoActive, true)
 		if err != nil {
 			return true, err
 		}
@@ -212,7 +213,7 @@ func (mod *AVBridge) HandleDiscordCommand(s *discordgo.Session, i *discordgo.Int
 		if helpers.DiscordDeferEphemeralInteraction(s, i) != nil {
 			return true, err
 		}
-		err := nodecg.ReplicantSet(*mod.ctx, "event:info:active", false)
+		err := nodecg.ReplicantSet(*mod.ctx, ngtbg.NodeCGReplicantEventInfoActive, false)
 		if err != nil {
 			return true, err
 		}
@@ -225,7 +226,7 @@ func (mod *AVBridge) HandleDiscordCommand(s *discordgo.Session, i *discordgo.Int
 		switch options[0].Options[0].Name {
 		case "now":
 			// Set the "now" display.
-			err := nodecg.ReplicantSet(*mod.ctx, "schedule:now", options[0].Options[0].Options[0].StringValue())
+			err := nodecg.ReplicantSet(*mod.ctx, ngtbg.NodeCGReplicantScheduleNow, options[0].Options[0].Options[0].StringValue())
 			if err != nil {
 				return true, err
 			}
@@ -246,7 +247,7 @@ func (mod *AVBridge) HandleDiscordCommand(s *discordgo.Session, i *discordgo.Int
 			if optionMap["name"] != nil {
 				newEventValue = optionMap["name"].StringValue()
 			}
-			err := nodecg.ReplicantSet(*mod.ctx, "schedule:next", newEventValue)
+			err := nodecg.ReplicantSet(*mod.ctx, ngtbg.NodeCGReplicantScheduleNext, newEventValue)
 			if err != nil {
 				return true, err
 			}
@@ -262,7 +263,7 @@ func (mod *AVBridge) HandleDiscordCommand(s *discordgo.Session, i *discordgo.Int
 func (mod *AVBridge) discordCommandAVFTB(s *discordgo.Session, i *discordgo.InteractionCreate) (err error) {
 	// Set preview scene to black...
 	_, err = mod.ws.Scenes.SetCurrentPreviewScene(&scenes.SetCurrentPreviewSceneParams{
-		SceneName: &sceneBlack,
+		SceneName: &ngtbg.OBSSceneBlack,
 	})
 	if err != nil {
 		return err
@@ -270,7 +271,7 @@ func (mod *AVBridge) discordCommandAVFTB(s *discordgo.Session, i *discordgo.Inte
 
 	// then transition to it.
 	_, err = mod.ws.Transitions.SetCurrentSceneTransition(&transitions.SetCurrentSceneTransitionParams{
-		TransitionName: &transitionFade,
+		TransitionName: &ngtbg.OBSTransFade,
 	})
 	if err != nil {
 		return err
@@ -288,7 +289,7 @@ func (mod *AVBridge) discordCommandAVFTB(s *discordgo.Session, i *discordgo.Inte
 func (mod *AVBridge) discordCommandAVInfoboard(s *discordgo.Session, i *discordgo.InteractionCreate) (err error) {
 	// Set preview scene to Infoboard...
 	_, err = mod.ws.Scenes.SetCurrentPreviewScene(&scenes.SetCurrentPreviewSceneParams{
-		SceneName: &sceneDefault,
+		SceneName: &ngtbg.OBSSceneDefault,
 	})
 	if err != nil {
 		return err
@@ -296,7 +297,7 @@ func (mod *AVBridge) discordCommandAVInfoboard(s *discordgo.Session, i *discordg
 
 	// then transition to it.
 	_, err = mod.ws.Transitions.SetCurrentSceneTransition(&transitions.SetCurrentSceneTransitionParams{
-		TransitionName: &transitionStinger,
+		TransitionName: &ngtbg.OBSTransStingModernWipe,
 	})
 	if err != nil {
 		return err
