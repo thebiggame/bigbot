@@ -4,6 +4,8 @@ import (
 	"context"
 	"github.com/andreykaipov/goobs"
 	"github.com/bwmarrin/discordgo"
+	"github.com/thebiggame/bigbot/internal/config"
+	"github.com/thebiggame/bigbot/pkg/nodecg"
 	"sync"
 )
 
@@ -14,13 +16,19 @@ type AVBridge struct {
 	// You MUST hold a read on wsMtx before using ws.
 	wsMtx sync.RWMutex
 
+	// ncg holds the NodeCG session.
+	ncg *nodecg.NodeCGServer
+
 	// The context given to us by the main bot.
 	ctx *context.Context
 }
 
 func New(discord *discordgo.Session) (bridge *AVBridge, err error) {
+	// Init NodeCG session
+	ncg := nodecg.New(config.RuntimeConfig.AV.NodeCG.Hostname).WithKey(config.RuntimeConfig.AV.NodeCG.AuthenticationKey)
 	return &AVBridge{
 		discord: discord,
+		ncg:     ncg,
 	}, nil
 }
 

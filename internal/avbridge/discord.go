@@ -5,8 +5,8 @@ import (
 	"github.com/andreykaipov/goobs/api/requests/transitions"
 	"github.com/bwmarrin/discordgo"
 	"github.com/thebiggame/bigbot/internal/avbridge/ngtbg"
+	"github.com/thebiggame/bigbot/internal/config"
 	"github.com/thebiggame/bigbot/internal/helpers"
-	"github.com/thebiggame/bigbot/pkg/nodecg"
 )
 
 var commands = []*discordgo.ApplicationCommand{
@@ -166,14 +166,14 @@ func (mod *AVBridge) HandleDiscordCommand(s *discordgo.Session, i *discordgo.Int
 		if optionMap["flair"] != nil {
 			flair = optionMap["flair"].BoolValue()
 		}
-		err := nodecg.MessageSend(*mod.ctx, ngtbg.NodeCGMessageChannelAlert, ngtbg.NodeCGMessageAlert{Name: name, Flair: flair})
+		err := mod.ncg.MessageSend(*mod.ctx, config.RuntimeConfig.AV.NodeCG.BundleName, ngtbg.NodeCGMessageChannelAlert, ngtbg.NodeCGMessageAlert{Name: name, Flair: flair})
 		if err != nil {
 			return true, err
 		}
 		_, err = helpers.DiscordInteractionFollowupMessage(s, i, "Alert Fired. Go be an attention whore!")
 		return true, err
 	case "alert-end":
-		err := nodecg.MessageSend(*mod.ctx, ngtbg.NodeCGMessageChannelAlertEnd, nil)
+		err := mod.ncg.MessageSend(*mod.ctx, config.RuntimeConfig.AV.NodeCG.BundleName, ngtbg.NodeCGMessageChannelAlertEnd, nil)
 		if err != nil {
 			return true, err
 		}
@@ -195,13 +195,13 @@ func (mod *AVBridge) HandleDiscordCommand(s *discordgo.Session, i *discordgo.Int
 		}
 
 		// First set the information body.
-		err := nodecg.ReplicantSet(*mod.ctx, ngtbg.NodeCGReplicantEventInfoBody, name)
+		err := mod.ncg.ReplicantSet(*mod.ctx, config.RuntimeConfig.AV.NodeCG.BundleName, ngtbg.NodeCGReplicantEventInfoBody, name)
 		if err != nil {
 			return true, err
 		}
 
 		// Then set it to active (plays the announcement chime & displays it)
-		err = nodecg.ReplicantSet(*mod.ctx, ngtbg.NodeCGReplicantEventInfoActive, true)
+		err = mod.ncg.ReplicantSet(*mod.ctx, config.RuntimeConfig.AV.NodeCG.BundleName, ngtbg.NodeCGReplicantEventInfoActive, true)
 		if err != nil {
 			return true, err
 		}
@@ -213,7 +213,7 @@ func (mod *AVBridge) HandleDiscordCommand(s *discordgo.Session, i *discordgo.Int
 		if helpers.DiscordDeferEphemeralInteraction(s, i) != nil {
 			return true, err
 		}
-		err := nodecg.ReplicantSet(*mod.ctx, ngtbg.NodeCGReplicantEventInfoActive, false)
+		err := mod.ncg.ReplicantSet(*mod.ctx, config.RuntimeConfig.AV.NodeCG.BundleName, ngtbg.NodeCGReplicantEventInfoActive, false)
 		if err != nil {
 			return true, err
 		}
@@ -226,7 +226,7 @@ func (mod *AVBridge) HandleDiscordCommand(s *discordgo.Session, i *discordgo.Int
 		switch options[0].Options[0].Name {
 		case "now":
 			// Set the "now" display.
-			err := nodecg.ReplicantSet(*mod.ctx, ngtbg.NodeCGReplicantScheduleNow, options[0].Options[0].Options[0].StringValue())
+			err := mod.ncg.ReplicantSet(*mod.ctx, config.RuntimeConfig.AV.NodeCG.BundleName, ngtbg.NodeCGReplicantScheduleNow, options[0].Options[0].Options[0].StringValue())
 			if err != nil {
 				return true, err
 			}
@@ -247,7 +247,7 @@ func (mod *AVBridge) HandleDiscordCommand(s *discordgo.Session, i *discordgo.Int
 			if optionMap["name"] != nil {
 				newEventValue = optionMap["name"].StringValue()
 			}
-			err := nodecg.ReplicantSet(*mod.ctx, ngtbg.NodeCGReplicantScheduleNext, newEventValue)
+			err := mod.ncg.ReplicantSet(*mod.ctx, config.RuntimeConfig.AV.NodeCG.BundleName, ngtbg.NodeCGReplicantScheduleNext, newEventValue)
 			if err != nil {
 				return true, err
 			}

@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/thebiggame/bigbot/internal/config"
 	"net/http"
 	"reflect"
 	"time"
@@ -32,6 +31,22 @@ var (
 	ErrNotBool = errors.New("non-boolean returned")
 )
 
+type NodeCGServer struct {
+	Hostname string
+	Key      string
+}
+
+func New(host string) *NodeCGServer {
+	return &NodeCGServer{
+		Hostname: host,
+	}
+}
+
+func (s *NodeCGServer) WithKey(key string) *NodeCGServer {
+	s.Key = key
+	return s
+}
+
 type replicantResponse struct {
 	Status  string `json:"status"`
 	Message string `json:"message,omitempty"`
@@ -52,8 +67,8 @@ type requestReplicant struct {
 
 // ReplicantGetBool is a shortcut to ReplicantGet for retrieving the current state of a Replicant,
 // where the content is a boolean value.
-func ReplicantGetBool(ctx context.Context, replicant string) (result bool, err error) {
-	rep, err := ReplicantGet(ctx, replicant)
+func (s *NodeCGServer) ReplicantGetBool(ctx context.Context, bundle, replicant string) (result bool, err error) {
+	rep, err := s.ReplicantGet(ctx, bundle, replicant)
 	if err != nil {
 		return false, err
 	}
@@ -66,13 +81,13 @@ func ReplicantGetBool(ctx context.Context, replicant string) (result bool, err e
 }
 
 // ReplicantGet fetches the current state of a given Replicant.
-func ReplicantGet(ctx context.Context, replicant string) (result interface{}, err error) {
+func (s *NodeCGServer) ReplicantGet(ctx context.Context, bundle, replicant string) (result interface{}, err error) {
 	// Build URL.
-	url := config.RuntimeConfig.AV.NodeCG.Hostname + nodecgRestPrefix + nodecgReplicantPrefix + "/" + config.RuntimeConfig.AV.NodeCG.BundleName + "/" + replicant
+	url := s.Hostname + nodecgRestPrefix + nodecgReplicantPrefix + "/" + bundle + "/" + replicant
 
 	body := &requestReplicant{
 		requestAuth: requestAuth{
-			Key: config.RuntimeConfig.AV.NodeCG.AuthenticationKey,
+			Key: s.Key,
 		},
 	}
 	data, err := json.Marshal(body)
@@ -117,13 +132,13 @@ func ReplicantGet(ctx context.Context, replicant string) (result interface{}, er
 
 // ReplicantSet sets the current state of a remote Replicant.
 // value MUST be serialisable as JSON in some fashion.
-func ReplicantSet(ctx context.Context, replicant string, value interface{}) (err error) {
+func (s *NodeCGServer) ReplicantSet(ctx context.Context, bundle string, replicant string, value interface{}) (err error) {
 	// Build URL.
-	url := config.RuntimeConfig.AV.NodeCG.Hostname + nodecgRestPrefix + nodecgReplicantPrefix + "/" + config.RuntimeConfig.AV.NodeCG.BundleName + "/" + replicant
+	url := s.Hostname + nodecgRestPrefix + nodecgReplicantPrefix + "/" + bundle + "/" + replicant
 
 	body := &requestReplicant{
 		requestAuth: requestAuth{
-			Key: config.RuntimeConfig.AV.NodeCG.AuthenticationKey,
+			Key: s.Key,
 		},
 		Data: value,
 	}
@@ -167,13 +182,13 @@ func ReplicantSet(ctx context.Context, replicant string, value interface{}) (err
 
 // MessageSend sends a NodeCG message.
 // value is optional, but MUST be serialisable as JSON in some fashion.
-func MessageSend(ctx context.Context, messageChannel string, value interface{}) (err error) {
+func (s *NodeCGServer) MessageSend(ctx context.Context, bundle, messageChannel string, value interface{}) (err error) {
 	// Build URL.
-	url := config.RuntimeConfig.AV.NodeCG.Hostname + nodecgRestPrefix + nodecgMessagePrefix + "/" + config.RuntimeConfig.AV.NodeCG.BundleName + "/" + messageChannel
+	url := s.Hostname + nodecgRestPrefix + nodecgMessagePrefix + "/" + bundle + "/" + messageChannel
 
 	body := &requestReplicant{
 		requestAuth: requestAuth{
-			Key: config.RuntimeConfig.AV.NodeCG.AuthenticationKey,
+			Key: s.Key,
 		},
 		Data: value,
 	}
