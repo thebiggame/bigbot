@@ -26,6 +26,11 @@ const (
 	// The body of "event info". String.
 	NodeCGReplicantEventInfoBody = "event:info:body"
 
+	// The currently playing music track. String.
+	NodeCGReplicantMusicTitle = "music:song"
+	// The currently playing music's artist. String.
+	NodeCGReplicantMusicArtist = "music:artist"
+
 	// NodeCG Message channels
 
 	// Fire an "alert" message. Use NodeCGMessageAlert to construct.

@@ -84,108 +84,113 @@ func (mod *TeamRoles) Start(ctx context.Context) (err error) {
 }
 
 func (mod *TeamRoles) HandleDiscordCommand(s *discordgo.Session, i *discordgo.InteractionCreate) (handled bool, err error) {
-	if i.ApplicationCommandData().Name != "team" {
+	switch i.Type {
+	case discordgo.InteractionApplicationCommand:
+		if i.ApplicationCommandData().Name != "team" {
+			return false, nil
+		}
+
+		options := i.ApplicationCommandData().Options
+		content := ""
+
+		// As you can see, names of subcommands (nested, top-level)
+		// and subcommand groups are provided through the arguments.
+		switch options[0].Name {
+
+		case "new":
+			// OOB check
+			if len(options[0].Options) < 0 {
+				content = "🤔 Please provide a team name."
+				break
+			}
+			if i.Interaction.GuildID == "" {
+				content = "😡 This command can only be used in a server."
+				break
+			}
+			roleName := options[0].Options[0].StringValue()
+			err := validateUserCanJoinRoleByName(s, i.Interaction.Member.User, i.GuildID, roleName)
+			if err != nil {
+				content = fmt.Sprintf("⚠️ %s", err.Error())
+				break
+			}
+			role, exists, err := createOrReturnRole(s, i.GuildID, roleName)
+			if err != nil {
+				content = fmt.Sprintf("⚠️ %s", err.Error())
+				break
+			}
+			err = s.GuildMemberRoleAdd(i.GuildID, i.Interaction.Member.User.ID, role.ID)
+			if err != nil {
+				content = fmt.Sprintf("⚠️ %s", err.Error())
+				break
+			}
+			if exists {
+				content = fmt.Sprintln("🤝 Joined existing", role.Name)
+			} else {
+				content = fmt.Sprintln("✨ Created", role.Name)
+			}
+
+		case "join":
+			// OOB check
+			if len(options[0].Options) < 0 {
+				content = "🤔 Please provide a team name."
+				break
+			}
+			if i.Interaction.GuildID == "" {
+				content = "😡 This command can only be used in a server."
+				break
+			}
+			role := options[0].Options[0].RoleValue(s, i.GuildID)
+			isTeam, _ := getTeamName(role.Name)
+			if !isTeam {
+				content = fmt.Sprintf("⚠️ %s. Stop that. <:ninja:449495170430533633>", ErrNotTeam)
+				break
+			}
+			err := validateUserCanJoinRole(s, i.Interaction.Member.User, i.GuildID, role)
+			if err != nil {
+				content = fmt.Sprintf("⚠️ %s", err.Error())
+				break
+			}
+			err = s.GuildMemberRoleAdd(i.GuildID, i.Interaction.Member.User.ID, role.ID)
+			if err != nil {
+				content = fmt.Sprintf("⚠️ %s", err.Error())
+				break
+			}
+			content = fmt.Sprintln("🤝 Joined", role.Name)
+		case "leave":
+			// OOB check
+			if len(options[0].Options) < 0 {
+				content = "🤔 Please provide a team name."
+				break
+			}
+			if i.Interaction.GuildID == "" {
+				content = "😡 This command can only be used in a server."
+				break
+			}
+			role := options[0].Options[0].RoleValue(s, i.GuildID)
+			isTeam, _ := getTeamName(role.Name)
+			if !isTeam {
+				content = fmt.Sprintf("⚠️ %s. Stop that. <:ninja:449495170430533633>", ErrNotTeam)
+				break
+			}
+			err := validateUserIsRoleMember(s, i.Interaction.Member.User, i.GuildID, role)
+			if err != nil {
+				content = fmt.Sprintf("⚠️ %s", err.Error())
+				break
+			}
+			err = s.GuildMemberRoleRemove(i.GuildID, i.Interaction.Member.User.ID, role.ID)
+			if err != nil {
+				content = fmt.Sprintf("⚠️ %s", err.Error())
+				break
+			}
+			content = fmt.Sprintln("👋 Left", role.Name)
+		default:
+			content = "😶 Please use a sub-command."
+		}
+
+		return true, helpers.DiscordInteractionEphemeralResponse(s, i, content)
+	default:
 		return false, nil
 	}
-
-	options := i.ApplicationCommandData().Options
-	content := ""
-
-	// As you can see, names of subcommands (nested, top-level)
-	// and subcommand groups are provided through the arguments.
-	switch options[0].Name {
-
-	case "new":
-		// OOB check
-		if len(options[0].Options) < 0 {
-			content = "🤔 Please provide a team name."
-			break
-		}
-		if i.Interaction.GuildID == "" {
-			content = "😡 This command can only be used in a server."
-			break
-		}
-		roleName := options[0].Options[0].StringValue()
-		err := validateUserCanJoinRoleByName(s, i.Interaction.Member.User, i.GuildID, roleName)
-		if err != nil {
-			content = fmt.Sprintf("⚠️ %s", err.Error())
-			break
-		}
-		role, exists, err := createOrReturnRole(s, i.GuildID, roleName)
-		if err != nil {
-			content = fmt.Sprintf("⚠️ %s", err.Error())
-			break
-		}
-		err = s.GuildMemberRoleAdd(i.GuildID, i.Interaction.Member.User.ID, role.ID)
-		if err != nil {
-			content = fmt.Sprintf("⚠️ %s", err.Error())
-			break
-		}
-		if exists {
-			content = fmt.Sprintln("🤝 Joined existing", role.Name)
-		} else {
-			content = fmt.Sprintln("✨ Created", role.Name)
-		}
-
-	case "join":
-		// OOB check
-		if len(options[0].Options) < 0 {
-			content = "🤔 Please provide a team name."
-			break
-		}
-		if i.Interaction.GuildID == "" {
-			content = "😡 This command can only be used in a server."
-			break
-		}
-		role := options[0].Options[0].RoleValue(s, i.GuildID)
-		isTeam, _ := getTeamName(role.Name)
-		if !isTeam {
-			content = fmt.Sprintf("⚠️ %s. Stop that. <:ninja:449495170430533633>", ErrNotTeam)
-			break
-		}
-		err := validateUserCanJoinRole(s, i.Interaction.Member.User, i.GuildID, role)
-		if err != nil {
-			content = fmt.Sprintf("⚠️ %s", err.Error())
-			break
-		}
-		err = s.GuildMemberRoleAdd(i.GuildID, i.Interaction.Member.User.ID, role.ID)
-		if err != nil {
-			content = fmt.Sprintf("⚠️ %s", err.Error())
-			break
-		}
-		content = fmt.Sprintln("🤝 Joined", role.Name)
-	case "leave":
-		// OOB check
-		if len(options[0].Options) < 0 {
-			content = "🤔 Please provide a team name."
-			break
-		}
-		if i.Interaction.GuildID == "" {
-			content = "😡 This command can only be used in a server."
-			break
-		}
-		role := options[0].Options[0].RoleValue(s, i.GuildID)
-		isTeam, _ := getTeamName(role.Name)
-		if !isTeam {
-			content = fmt.Sprintf("⚠️ %s. Stop that. <:ninja:449495170430533633>", ErrNotTeam)
-			break
-		}
-		err := validateUserIsRoleMember(s, i.Interaction.Member.User, i.GuildID, role)
-		if err != nil {
-			content = fmt.Sprintf("⚠️ %s", err.Error())
-			break
-		}
-		err = s.GuildMemberRoleRemove(i.GuildID, i.Interaction.Member.User.ID, role.ID)
-		if err != nil {
-			content = fmt.Sprintf("⚠️ %s", err.Error())
-			break
-		}
-		content = fmt.Sprintln("👋 Left", role.Name)
-	default:
-		content = "😶 Please use a sub-command."
-	}
-
-	return true, helpers.DiscordInteractionEphemeralResponse(s, i, content)
 }
 
 func validateUserCanJoinRoleByName(s *discordgo.Session, u *discordgo.User, guild, targetRole string) error {

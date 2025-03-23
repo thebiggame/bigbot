@@ -70,7 +70,15 @@ func (b *BigBot) handleDiscordCommand(s *discordgo.Session, i *discordgo.Interac
 		g.Go(func() error {
 			handled, err := m.HandleDiscordCommand(s, i)
 			if handled {
-				log.Debugf("Module %s handled command %v", reflect.TypeOf(m).Elem().Name(), i.ApplicationCommandData().Name)
+				switch i.Type {
+				case discordgo.InteractionApplicationCommand:
+					log.Debugf("Module %s handled command %v", reflect.TypeOf(m).Elem().Name(), i.ApplicationCommandData().Name)
+				case discordgo.InteractionModalSubmit:
+					log.Debugf("Module %s handled modal response for %v", reflect.TypeOf(m).Elem().Name(), i.ModalSubmitData().CustomID)
+				default:
+					log.Warnf("Module %s handled command of unexpected type", reflect.TypeOf(m).Elem().Name())
+				}
+
 			}
 			return err
 		})
