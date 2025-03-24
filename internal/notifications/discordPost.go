@@ -1,4 +1,4 @@
-package avbridge
+package notifications
 
 import (
 	"fmt"

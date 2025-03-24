@@ -9,6 +9,7 @@ import (
 	"github.com/thebiggame/bigbot/internal/config"
 	"github.com/thebiggame/bigbot/internal/helpers"
 	log "github.com/thebiggame/bigbot/internal/log"
+	"github.com/thebiggame/bigbot/internal/notifications"
 	"github.com/thebiggame/bigbot/internal/teamroles"
 	"golang.org/x/sync/errgroup"
 	"os"
@@ -56,11 +57,18 @@ func (b *BigBot) WithWANModules() *BigBot {
 // e.g. those that require intranet access to function properly.
 func (b *BigBot) WithLANModules() *BigBot {
 	// avbridge
-	module, err := avbridge.New(b.DiscordSession)
+	modAVBridge, err := avbridge.New(b.DiscordSession)
 	if err != nil {
 		panic(err)
 	}
-	b.modules = append(b.modules, module)
+	b.modules = append(b.modules, modAVBridge)
+
+	// notifications
+	modNotify, err := notifications.New(b.DiscordSession)
+	if err != nil {
+		panic(err)
+	}
+	b.modules = append(b.modules, modNotify)
 	return b
 }
 
