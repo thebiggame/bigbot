@@ -2,33 +2,27 @@ package avbridge
 
 import (
 	"context"
-	"github.com/andreykaipov/goobs"
 	"github.com/bwmarrin/discordgo"
-	"github.com/thebiggame/bigbot/internal/config"
-	"github.com/thebiggame/bigbot/pkg/nodecg"
+	"github.com/thebiggame/bigbot/internal/avcomms"
 	"sync"
 )
 
 type AVBridge struct {
 	discord *discordgo.Session
-	// ws holds the OBS connection. ALWAYS check it is not nil before usage, and take a read on wsMtx.
-	ws *goobs.Client
-	// You MUST hold a read on wsMtx before using ws.
-	wsMtx sync.RWMutex
-
-	// ncg holds the NodeCG session.
-	ncg *nodecg.NodeCGServer
 
 	// The context given to us by the main bot.
 	ctx *context.Context
 }
 
 func New(discord *discordgo.Session) (bridge *AVBridge, err error) {
-	// Init NodeCG session
-	ncg := nodecg.New(config.RuntimeConfig.AV.NodeCG.Hostname).WithKey(config.RuntimeConfig.AV.NodeCG.AuthenticationKey)
+	// Init AV session handlers in avcomms
+	// Unbind this tight integration perhaps?
+	err = avcomms.Init()
+	if err != nil {
+		return nil, err
+	}
 	return &AVBridge{
 		discord: discord,
-		ncg:     ncg,
 	}, nil
 }
 
@@ -38,6 +32,7 @@ func (mod *AVBridge) DiscordCommands() ([]*discordgo.ApplicationCommand, error) 
 
 func (mod *AVBridge) Start(ctx context.Context) (err error) {
 	mod.ctx = &ctx
+	// TODO This feels like the wrong place to initialise avcomms.
 	// goobsDaemon needs the close channel to be ready.
 	goobsCtx, goobsCancel := context.WithCancel(ctx)
 	var wg sync.WaitGroup
@@ -45,7 +40,7 @@ func (mod *AVBridge) Start(ctx context.Context) (err error) {
 		wg.Add(1)
 		defer wg.Done()
 		// goobsDaemon is responsible for watching the goobs connection and keeping it as healthy as possible
-		mod.goobsDaemon(goobsCtx)
+		avcomms.OBSDaemon(goobsCtx)
 	}()
 
 	for {
