@@ -7,6 +7,7 @@ import (
 	"github.com/thebiggame/bigbot/internal/avbridge/ngtbg"
 	"github.com/thebiggame/bigbot/internal/config"
 	"github.com/thebiggame/bigbot/internal/helpers"
+	"github.com/thebiggame/bigbot/internal/log"
 	"strings"
 )
 
@@ -262,19 +263,26 @@ func (mod *AVBridge) HandleDiscordCommand(s *discordgo.Session, i *discordgo.Int
 			// Potentially unsafe? This is how the example does it.
 			name := data.Components[0].(*discordgo.ActionsRow).Components[0].(*discordgo.TextInput).Value
 
-			// First set the information body.
+			// First attempt to set the information body.
 			err := mod.ncg.ReplicantSet(*mod.ctx, config.RuntimeConfig.AV.NodeCG.BundleName, ngtbg.NodeCGReplicantEventInfoBody, name)
 			if err != nil {
-				return true, err
+				// NodeCG not available for some reason.
+				log.Infof("NodeCG not available: %s", err)
+			} else {
+				// Then set it to active (plays the announcement chime & displays it)
+				err = mod.ncg.ReplicantSet(*mod.ctx, config.RuntimeConfig.AV.NodeCG.BundleName, ngtbg.NodeCGReplicantEventInfoActive, true)
+				if err != nil {
+					return true, err
+				}
 			}
 
-			// Then set it to active (plays the announcement chime & displays it)
-			err = mod.ncg.ReplicantSet(*mod.ctx, config.RuntimeConfig.AV.NodeCG.BundleName, ngtbg.NodeCGReplicantEventInfoActive, true)
+			// Separately, regardless of whether NodeCG is available or not, send to Discord channel (if configured).
+			err = sendNotificationToDiscord(s, name)
 			if err != nil {
 				return true, err
 			}
 
-			_, err = helpers.DiscordInteractionFollowupMessage(s, i, "ℹ Information is being displayed.")
+			_, err = helpers.DiscordInteractionFollowupMessage(s, i, "ℹ Information sent successfully.")
 			return true, err
 		default:
 			// This isn't anything to do with us.

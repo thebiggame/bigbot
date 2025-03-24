@@ -4,8 +4,11 @@ package config
 // Config defines the format of the application configuration.
 type Config struct {
 	Discord struct {
-		Token   string `short:"t" long:"token" help:"Discord bot token" required:"" env:"TOKEN"`
-		GuildID string `long:"guildID" help:"Discord guild ID to monitor" default:"" env:"GUILD"`
+		Token         string `short:"t" long:"token" help:"Discord bot token" required:"" env:"TOKEN"`
+		GuildID       string `long:"guildID" help:"Discord guild ID to monitor" default:"" env:"GUILD"`
+		Announcements struct {
+			ChannelID string `json:"channelID" help:"Channel ID" default:"" env:"CHANNEL"`
+		} `prefix:"announcements." embed:"" envprefix:"ANNOUNCEMENTS_"`
 	} `prefix:"discord." embed:"" envprefix:"DISCORD_"`
 	AV struct {
 		OBS struct {
