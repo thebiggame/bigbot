@@ -9,6 +9,9 @@ type Config struct {
 		Announcements struct {
 			ChannelID string `json:"channelID" help:"Channel ID" default:"" env:"CHANNEL"`
 		} `prefix:"announcements." embed:"" envprefix:"ANNOUNCEMENTS_"`
+		Permissions struct {
+			CrewRole string `help:"If a user is a member of this role ID, treat them as Crew." default:"" env:"ROLE_CREW"`
+		} `prefix:"permissions." embed:"" envprefix:"PERMISSIONS_"`
 	} `prefix:"discord." embed:"" envprefix:"DISCORD_"`
 	AV struct {
 		OBS struct {

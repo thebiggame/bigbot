@@ -18,52 +18,6 @@ func New(discord *discordgo.Session) (mod *Notifications, err error) {
 	}, nil
 }
 
-var commands = []*discordgo.ApplicationCommand{
-	{
-		Name:                     "notify",
-		Description:              "🛎️ Send & manage notifications (you must be a crew member)",
-		DefaultMemberPermissions: &defaultCrewCommandPermissions,
-		DMPermission:             &defaultCrewCommandDMPermissions,
-		Options: []*discordgo.ApplicationCommandOption{
-			{
-				Name:        "alert",
-				Description: "🔔 Sound an Alert on the AV system.",
-				Type:        discordgo.ApplicationCommandOptionSubCommand,
-				Options: []*discordgo.ApplicationCommandOption{
-					{
-						Type:        discordgo.ApplicationCommandOptionBoolean,
-						Name:        "flair",
-						Description: "Whether the alert should arrive with 'flair'. WARNING - this makes noise!",
-						Required:    true,
-					},
-					{
-						Type:        discordgo.ApplicationCommandOptionString,
-						Name:        "name",
-						Description: "A short description of why you want people's attention.",
-						Required:    true,
-						MaxLength:   40,
-					},
-				},
-			},
-			{
-				Name:        "alert-end",
-				Description: "🔕 End the Alert early.",
-				Type:        discordgo.ApplicationCommandOptionSubCommand,
-			},
-			{
-				Name:        "announcement",
-				Description: "🔔 Open the Announcement modal to create a new Announcement. (Submitting this makes noise!)",
-				Type:        discordgo.ApplicationCommandOptionSubCommand,
-			},
-			{
-				Name:        "announcement-end",
-				Description: "🔕 End the Announcement (return to normal service).",
-				Type:        discordgo.ApplicationCommandOptionSubCommand,
-			},
-		},
-	},
-}
-
 func (mod *Notifications) DiscordCommands() ([]*discordgo.ApplicationCommand, error) {
 	return commands, nil
 }
