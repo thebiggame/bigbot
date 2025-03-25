@@ -83,7 +83,7 @@ func (mod *TeamRoles) Start(ctx context.Context) (err error) {
 	return ctx.Err()
 }
 
-func (mod *TeamRoles) HandleDiscordCommand(s *discordgo.Session, i *discordgo.InteractionCreate) (handled bool, err error) {
+func (mod *TeamRoles) DiscordHandleInteraction(s *discordgo.Session, i *discordgo.InteractionCreate) (handled bool, err error) {
 	switch i.Type {
 	case discordgo.InteractionApplicationCommand:
 		if i.ApplicationCommandData().Name != "team" {

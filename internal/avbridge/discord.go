@@ -71,7 +71,7 @@ var commands = []*discordgo.ApplicationCommand{
 	},
 }
 
-func (mod *AVBridge) HandleDiscordCommand(s *discordgo.Session, i *discordgo.InteractionCreate) (handled bool, err error) {
+func (mod *AVBridge) DiscordHandleInteraction(s *discordgo.Session, i *discordgo.InteractionCreate) (handled bool, err error) {
 	switch i.Type {
 	case discordgo.InteractionApplicationCommand:
 		// Handle normally.

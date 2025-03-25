@@ -56,7 +56,7 @@ var commands = []*discordgo.ApplicationCommand{
 	},
 }
 
-func (mod *Notifications) HandleDiscordCommand(s *discordgo.Session, i *discordgo.InteractionCreate) (handled bool, err error) {
+func (mod *Notifications) DiscordHandleInteraction(s *discordgo.Session, i *discordgo.InteractionCreate) (handled bool, err error) {
 	switch i.Type {
 	case discordgo.InteractionApplicationCommand:
 		// Handle normally.

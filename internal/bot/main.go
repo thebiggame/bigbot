@@ -21,7 +21,7 @@ import (
 type BotModule interface {
 	Start(context context.Context) error
 	DiscordCommands() ([]*discordgo.ApplicationCommand, error)
-	HandleDiscordCommand(session *discordgo.Session, interaction *discordgo.InteractionCreate) (handled bool, err error)
+	DiscordHandleInteraction(session *discordgo.Session, interaction *discordgo.InteractionCreate) (handled bool, err error)
 }
 
 type BigBot struct {
@@ -76,7 +76,7 @@ func (b *BigBot) handleDiscordCommand(s *discordgo.Session, i *discordgo.Interac
 	g := new(errgroup.Group)
 	for _, m := range b.modules {
 		g.Go(func() error {
-			handled, err := m.HandleDiscordCommand(s, i)
+			handled, err := m.DiscordHandleInteraction(s, i)
 			if handled {
 				switch i.Type {
 				case discordgo.InteractionApplicationCommand:
