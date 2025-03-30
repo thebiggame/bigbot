@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"github.com/andreykaipov/goobs/api"
 	"github.com/hashicorp/logutils"
@@ -13,14 +14,18 @@ import (
 )
 
 type RunCmd struct {
-	ServeLAN bool `required:"" group:"serve" help:"Serve the LAN portion of the bot."`
-	ServeWAN bool `required:"" group:"serve" help:"Serve the WAN portion of the bot."`
+	ServeLAN bool `group:"serve" help:"Serve the LAN portion of the bot."`
+	ServeWAN bool `group:"serve" help:"Serve the WAN portion of the bot."`
 
 	// Embed main app config (will be set during run)
 	Config config.Config `embed:"" envprefix:"BIGBOT_"`
 }
 
 func (cmd *RunCmd) Run(globals *Globals) error {
+	if !cmd.ServeLAN && !cmd.ServeWAN {
+		// No run type is set, error.
+		return errors.New("you must use at least one of --serve-wan, --serve-lan")
+	}
 	// Bind config to global app config struct
 	config.RuntimeConfig = cmd.Config
 	// Configure logging
