@@ -111,6 +111,10 @@ func (mod *Notifications) DiscordHandleInteraction(s *discordgo.Session, i *disc
 			_, err = helpers.DiscordInteractionFollowupMessage(s, i, "Alert Fired. Go be an attention whore!")
 			return true, err
 		case "alert-end":
+			// Let the client know we're working on it.
+			if helpers.DiscordDeferEphemeralInteraction(s, i) != nil {
+				return true, err
+			}
 			err = avcomms.NodeCG.ReplicantSet(*mod.ctx, config.RuntimeConfig.AV.NodeCG.BundleName, ngtbg.NodeCGReplicantNotificationAlertActive, false)
 			if err != nil {
 				return true, err
