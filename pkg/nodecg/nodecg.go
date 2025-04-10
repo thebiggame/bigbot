@@ -51,9 +51,9 @@ type replicantResponse struct {
 	Status  string `json:"status"`
 	Message string `json:"message,omitempty"`
 
-	Name   string      `json:"name"`
-	Bundle string      `json:"bundle"`
-	Value  interface{} `json:"value"`
+	Name   string          `json:"name"`
+	Bundle string          `json:"bundle"`
+	Value  json.RawMessage `json:"value"`
 }
 
 type requestAuth struct {
@@ -82,6 +82,17 @@ func (s *NodeCGServer) ReplicantGetBool(ctx context.Context, bundle, replicant s
 
 // ReplicantGet fetches the current state of a given Replicant.
 func (s *NodeCGServer) ReplicantGet(ctx context.Context, bundle, replicant string) (result interface{}, err error) {
+	var resp interface{}
+	err = s.ReplicantGetDecode(ctx, bundle, replicant, &resp)
+	return resp, err
+}
+
+// ReplicantGetDecode fetches the current state of a given Replicant, then decodes it to your provided pointer.
+func (s *NodeCGServer) ReplicantGetDecode(ctx context.Context, bundle, replicant string, target any) (err error) {
+	tv := reflect.ValueOf(target)
+	if tv.Kind() != reflect.Pointer || tv.IsNil() {
+		return &json.InvalidUnmarshalError{Type: reflect.TypeOf(target)}
+	}
 	// Build URL.
 	url := s.Hostname + nodecgRestPrefix + nodecgReplicantPrefix + "/" + bundle + "/" + replicant
 
@@ -92,7 +103,7 @@ func (s *NodeCGServer) ReplicantGet(ctx context.Context, bundle, replicant strin
 	}
 	data, err := json.Marshal(body)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	tCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
@@ -100,34 +111,36 @@ func (s *NodeCGServer) ReplicantGet(ctx context.Context, bundle, replicant strin
 
 	req, err := http.NewRequestWithContext(tCtx, "POST", url, bytes.NewBuffer(data))
 	if err != nil {
-		return nil, err
+		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
 
 	respData, err := HTTPClient.Do(req)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer respData.Body.Close()
 
 	if respData.StatusCode != http.StatusOK {
 		if respData.StatusCode == http.StatusInternalServerError {
-			return nil, ErrNodeCGInternalError
+			return ErrNodeCGInternalError
 		} else {
-			return nil, ErrNodeCGUnknownError
+			return ErrNodeCGUnknownError
 		}
 	}
 
 	var resp replicantResponse
 	err = json.NewDecoder(respData.Body).Decode(&resp)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if resp.Status != nodecgStatusSuccess {
-		return nil, fmt.Errorf("%w: %s", ErrNodeCGGeneralError, resp.Message)
+		return fmt.Errorf("%w: %s", ErrNodeCGGeneralError, resp.Message)
 	}
 
-	return resp.Value, nil
+	err = json.Unmarshal(resp.Value, target)
+
+	return err
 }
 
 // ReplicantSet sets the current state of a remote Replicant.

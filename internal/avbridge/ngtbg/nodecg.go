@@ -1,12 +1,20 @@
 package ngtbg
 
-type NodeCGReplicantAlert struct {
+type NodeCGReplicantDataAlertData struct {
 	// The body of the alert that will be shown in the centre of the screen.
 	Body string `json:"body"`
 	// Whether the alert should arrive with "flair" - that is, an audible warning and bright text.
 	Flair bool `json:"flair"`
 	// How long to wait before showing the alert animation.
 	Delay int `json:"delay"`
+}
+
+// NodeCGReplicantDataMusicData is the content of a MusicData replicant.
+type NodeCGReplicantDataMusicData struct {
+	// The song title.
+	Title string `json:"title"`
+	// The song artist.
+	Artist string `json:"artist"`
 }
 
 const (
@@ -17,13 +25,13 @@ const (
 	// The body of "event info". String.
 	NodeCGReplicantEventInfoBody = "event:info:body"
 
-	// Information on the current music traka. Object of type <MusicData>{title:"string",artist:"string"}
+	// Information on the current music traka. Object of type NodeCGReplicantDataMusicData
 	NodeCGReplicantMusicData = "music:data"
 
 	// Whether the notification "alert" is active. Boolean.
 	NodeCGReplicantNotificationAlertActive = "notify:alert:active"
 
-	// The data for the "alert" notification type. Object of type <AlertData>{body:"string",flair:boolean,delay:int}
+	// The data for the "alert" notification type. Object of type NodeCGReplicantDataAlertData
 	NodeCGReplicantNotificationAlertData = "notify:alert:data"
 
 	// NodeCG Message channels

@@ -9,6 +9,7 @@ import (
 	"github.com/thebiggame/bigbot/internal/config"
 	"github.com/thebiggame/bigbot/internal/helpers"
 	log "github.com/thebiggame/bigbot/internal/log"
+	"github.com/thebiggame/bigbot/internal/musicparty"
 	"github.com/thebiggame/bigbot/internal/notifications"
 	"github.com/thebiggame/bigbot/internal/teamroles"
 	"golang.org/x/sync/errgroup"
@@ -69,6 +70,13 @@ func (b *BigBot) WithLANModules() *BigBot {
 		panic(err)
 	}
 	b.modules = append(b.modules, modNotify)
+
+	// MusicParty
+	modMusic, err := musicparty.New(b.DiscordSession)
+	if err != nil {
+		panic(err)
+	}
+	b.modules = append(b.modules, modMusic)
 	return b
 }
 
@@ -117,7 +125,15 @@ func (b *BigBot) handleDiscordCommand(s *discordgo.Session, i *discordgo.Interac
 }
 
 func (b *BigBot) registerCommands() (err error) {
-	var modCmds []*discordgo.ApplicationCommand
+	// Fetch all currently registered commands on the server.
+	// this is done to avoid overwrites / deduplication.
+	// We don't use ApplicationCommandOverwriteBulk because if the server's understanding of the command changes,
+	// for example if role permissions change,
+	// it creates a new version of that slash command causing duplication.
+	guildCmds, err := b.DiscordSession.ApplicationCommands(b.DiscordSession.State.User.ID, config.RuntimeConfig.Discord.GuildID)
+	if err != nil {
+		return fmt.Errorf("error getting guild commands: %w", err)
+	}
 	// Collate all slash commands.
 	for _, v := range b.modules {
 		mC, err := v.DiscordCommands()
@@ -125,18 +141,36 @@ func (b *BigBot) registerCommands() (err error) {
 			return err
 		}
 		for _, cmd := range mC {
-			modCmds = append(modCmds, cmd)
+			// Write each command out individually to the guild.
+			// First though, check to see whether the command already exists on the server.
+			var guildCmd *discordgo.ApplicationCommand
+			for _, gCmd := range guildCmds {
+				if cmd.Name == gCmd.Name {
+					// Match, no need to update.
+					guildCmd = gCmd
+					break
+				}
+			}
+			// the cmd pointer is specifically written to here, which ensures that the ID is available to the originating slice.
+			// err is scoped correctly here.
+			if guildCmd != nil && guildCmd.ID != "" {
+				// A command already exists on the server, just update it.
+				log.Debugf("Command %s already exists on the guild, updating", cmd.Name)
+				cmd, err = b.DiscordSession.ApplicationCommandEdit(b.DiscordSession.State.User.ID, config.RuntimeConfig.Discord.GuildID, guildCmd.ID, cmd)
+			} else {
+				// We need a new guild command.
+				log.Debugf("Command %s does not exist on the guild, creating new", cmd.Name)
+				cmd, err = b.DiscordSession.ApplicationCommandCreate(b.DiscordSession.State.User.ID, config.RuntimeConfig.Discord.GuildID, cmd)
+			}
+
+			if err != nil {
+				return fmt.Errorf("error with discord command registration: %w", err)
+			}
+			// Write them to our understanding of the commands.
+			// We write here with the new command knowledge (from the ApplicationCommandCreate) so that we can interact with them later (they'll have IDs).
+			b.commands = append(b.commands, cmd)
 		}
 	}
-	// Write them out en masse to the guild.
-	cmds, err := b.DiscordSession.ApplicationCommandBulkOverwrite(b.DiscordSession.State.User.ID, config.RuntimeConfig.Discord.GuildID, modCmds)
-	if err != nil {
-		// This shouldn't happen. Bail out
-		return fmt.Errorf("error creating commands: %w", err)
-	}
-	// Write them to our understanding of the commands.
-	// We write here with the new command knowledge (from the ApplicationCommandBulkOverwrite) so that we can interact with them later (they'll have IDs).
-	copy(b.commands, cmds)
 	return nil
 }
 

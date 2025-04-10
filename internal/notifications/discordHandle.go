@@ -96,7 +96,7 @@ func (mod *Notifications) DiscordHandleInteraction(s *discordgo.Session, i *disc
 			if optionMap["delay"] != nil {
 				delay = optionMap["delay"].UintValue()
 			}
-			err := avcomms.NodeCG.ReplicantSet(*mod.ctx, config.RuntimeConfig.AV.NodeCG.BundleName, ngtbg.NodeCGReplicantNotificationAlertData, ngtbg.NodeCGReplicantAlert{
+			err := avcomms.NodeCG.ReplicantSet(*mod.ctx, config.RuntimeConfig.AV.NodeCG.BundleName, ngtbg.NodeCGReplicantNotificationAlertData, ngtbg.NodeCGReplicantDataAlertData{
 				Body:  name,
 				Flair: flair,
 				Delay: int(delay),
