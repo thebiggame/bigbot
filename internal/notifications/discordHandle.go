@@ -35,6 +35,13 @@ var commands = []*discordgo.ApplicationCommand{
 						Required:    true,
 						MaxLength:   40,
 					},
+					{
+						Type:        discordgo.ApplicationCommandOptionInteger,
+						Name:        "delay",
+						Description: "The amount of time to pause before displaying the alert. Defaults to Instant.",
+						Required:    false,
+						MaxValue:    15,
+					},
 				},
 			},
 			{
@@ -78,6 +85,7 @@ func (mod *Notifications) DiscordHandleInteraction(s *discordgo.Session, i *disc
 			}
 			name := "Pay Attention!"
 			var flair bool
+			var delay uint64 = 0
 
 			if optionMap["name"] != nil {
 				name = optionMap["name"].StringValue()
@@ -85,11 +93,13 @@ func (mod *Notifications) DiscordHandleInteraction(s *discordgo.Session, i *disc
 			if optionMap["flair"] != nil {
 				flair = optionMap["flair"].BoolValue()
 			}
+			if optionMap["delay"] != nil {
+				delay = optionMap["delay"].UintValue()
+			}
 			err := avcomms.NodeCG.ReplicantSet(*mod.ctx, config.RuntimeConfig.AV.NodeCG.BundleName, ngtbg.NodeCGReplicantNotificationAlertData, ngtbg.NodeCGReplicantAlert{
 				Body:  name,
 				Flair: flair,
-				// TODO Stubbed for the time being. Needs a Modal picker for a delay.
-				Delay: 0,
+				Delay: int(delay),
 			})
 			if err != nil {
 				return true, err
