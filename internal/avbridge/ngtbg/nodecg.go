@@ -18,7 +18,7 @@ const (
 	NodeCGReplicantEventInfoBody = "event:info:body"
 
 	// Information on the current music traka. Object of type <MusicData>{title:"string",artist:"string"}
-	NodeCGReplicantMusicTitle = "music:data"
+	NodeCGReplicantMusicData = "music:data"
 
 	// Whether the notification "alert" is active. Boolean.
 	NodeCGReplicantNotificationAlertActive = "notify:alert:active"
