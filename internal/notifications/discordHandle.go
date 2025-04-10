@@ -85,14 +85,23 @@ func (mod *Notifications) DiscordHandleInteraction(s *discordgo.Session, i *disc
 			if optionMap["flair"] != nil {
 				flair = optionMap["flair"].BoolValue()
 			}
-			err := avcomms.NodeCG.MessageSend(*mod.ctx, config.RuntimeConfig.AV.NodeCG.BundleName, ngtbg.NodeCGMessageChannelAlert, ngtbg.NodeCGMessageAlert{Name: name, Flair: flair})
+			err := avcomms.NodeCG.ReplicantSet(*mod.ctx, config.RuntimeConfig.AV.NodeCG.BundleName, ngtbg.NodeCGReplicantNotificationAlertData, ngtbg.NodeCGReplicantAlert{
+				Body:  name,
+				Flair: flair,
+				// TODO Stubbed for the time being. Needs a Modal picker for a delay.
+				Delay: 0,
+			})
+			if err != nil {
+				return true, err
+			}
+			err = avcomms.NodeCG.ReplicantSet(*mod.ctx, config.RuntimeConfig.AV.NodeCG.BundleName, ngtbg.NodeCGReplicantNotificationAlertActive, true)
 			if err != nil {
 				return true, err
 			}
 			_, err = helpers.DiscordInteractionFollowupMessage(s, i, "Alert Fired. Go be an attention whore!")
 			return true, err
 		case "alert-end":
-			err := avcomms.NodeCG.MessageSend(*mod.ctx, config.RuntimeConfig.AV.NodeCG.BundleName, ngtbg.NodeCGMessageChannelAlertEnd, nil)
+			err = avcomms.NodeCG.ReplicantSet(*mod.ctx, config.RuntimeConfig.AV.NodeCG.BundleName, ngtbg.NodeCGReplicantNotificationAlertActive, false)
 			if err != nil {
 				return true, err
 			}

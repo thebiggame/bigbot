@@ -6,7 +6,6 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/thebiggame/bigbot/internal/avbridge/ngtbg"
 	"github.com/thebiggame/bigbot/internal/avcomms"
-	"github.com/thebiggame/bigbot/internal/config"
 	"github.com/thebiggame/bigbot/internal/helpers"
 )
 
@@ -31,41 +30,6 @@ var commands = []*discordgo.ApplicationCommand{
 				Name:        "infoboard",
 				Description: "📽️ Transition to Infoboard (the default projector display).",
 				Type:        discordgo.ApplicationCommandOptionSubCommand,
-			},
-			{
-				Name:        "schedule",
-				Description: "📆 Update the Now & Next display.",
-				Type:        discordgo.ApplicationCommandOptionSubCommandGroup,
-				Options: []*discordgo.ApplicationCommandOption{
-					{
-						Type:        discordgo.ApplicationCommandOptionSubCommand,
-						Name:        "now",
-						Description: "Set the CURRENT event.",
-						Options: []*discordgo.ApplicationCommandOption{
-							{
-								Type:        discordgo.ApplicationCommandOptionString,
-								Name:        "name",
-								Description: "A brief description of the event.",
-								Required:    true,
-								MaxLength:   100,
-							},
-						},
-					},
-					{
-						Type:        discordgo.ApplicationCommandOptionSubCommand,
-						Name:        "next",
-						Description: "Set the NEXT event.",
-						Options: []*discordgo.ApplicationCommandOption{
-							{
-								Type:        discordgo.ApplicationCommandOptionString,
-								Name:        "name",
-								Description: "A brief description of the event. Leave blank to show no upcoming event.",
-								Required:    false,
-								MaxLength:   100,
-							},
-						},
-					},
-				},
 			},
 		},
 	},
@@ -108,41 +72,6 @@ func (mod *AVBridge) DiscordHandleInteraction(s *discordgo.Session, i *discordgo
 				return true, err
 			}
 			return true, mod.discordCommandAVInfoboard(s, i)
-		case "schedule":
-			if helpers.DiscordDeferEphemeralInteraction(s, i) != nil {
-				return true, err
-			}
-			switch options[0].Options[0].Name {
-			case "now":
-				// Set the "now" display.
-				err := avcomms.NodeCG.ReplicantSet(*mod.ctx, config.RuntimeConfig.AV.NodeCG.BundleName, ngtbg.NodeCGReplicantScheduleNow, options[0].Options[0].Options[0].StringValue())
-				if err != nil {
-					return true, err
-				}
-				_, err = helpers.DiscordInteractionFollowupMessage(s, i, "👍 Schedule updated.")
-				return true, err
-			case "next":
-				// Let the client know we're working on it.
-				if helpers.DiscordDeferEphemeralInteraction(s, i) != nil {
-					return true, err
-				}
-				// Set the "next" display.
-				// Need to do a bounds check against the options.
-				optionMap := make(map[string]*discordgo.ApplicationCommandInteractionDataOption, len(options))
-				for _, opt := range options[0].Options[0].Options {
-					optionMap[opt.Name] = opt
-				}
-				var newEventValue string
-				if optionMap["name"] != nil {
-					newEventValue = optionMap["name"].StringValue()
-				}
-				err := avcomms.NodeCG.ReplicantSet(*mod.ctx, config.RuntimeConfig.AV.NodeCG.BundleName, ngtbg.NodeCGReplicantScheduleNext, newEventValue)
-				if err != nil {
-					return true, err
-				}
-				_, err = helpers.DiscordInteractionFollowupMessage(s, i, "👍 Schedule updated.")
-				return true, err
-			}
 		}
 
 		// Not handled by specific handler function, respond with content data.
