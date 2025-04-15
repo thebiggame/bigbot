@@ -32,10 +32,6 @@ func (mod *ShoutProxy) DiscordHandleMessage(s *discordgo.Session, m *discordgo.M
 			userAvatar = m.Message.Member.AvatarURL("128x128")
 		}
 
-		// TODO STUBBED
-		var shoutboxEntries = ngtbg.NodeCGReplicantDataShoutboxEntries{
-			Shouts: []ngtbg.NodeCGReplicantDataShoutboxEntry{},
-		}
 		var shoutEntry = ngtbg.NodeCGReplicantDataShoutboxEntry{
 			ID: "DISC-" + m.Message.ID,
 			User: struct {
@@ -48,7 +44,6 @@ func (mod *ShoutProxy) DiscordHandleMessage(s *discordgo.Session, m *discordgo.M
 			Timestamp: m.Message.Timestamp.Format(time.RFC3339),
 			Message:   m.Message.Content,
 		}
-		shoutboxEntries.Shouts = append(shoutboxEntries.Shouts, shoutEntry)
 		err := avcomms.NodeCG.MessageSend(*mod.ctx, config.RuntimeConfig.AV.NodeCG.BundleName, ngtbg.NodeCGMessageShoutboxNew, shoutEntry)
 		// err = avcomms.NodeCG.ReplicantSet(*mod.ctx, config.RuntimeConfig.AV.NodeCG.BundleName, ngtbg.NodeCGReplicantShoutbox, shoutboxEntries)
 		return err
