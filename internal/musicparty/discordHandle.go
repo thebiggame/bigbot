@@ -16,6 +16,10 @@ var commands = []*discordgo.ApplicationCommand{
 	},
 }
 
+func (mod *MusicParty) DiscordHandleMessage(_ *discordgo.Session, _ *discordgo.MessageCreate) (err error) {
+	return nil
+}
+
 func (mod *MusicParty) DiscordHandleInteraction(s *discordgo.Session, i *discordgo.InteractionCreate) (handled bool, err error) {
 	switch i.Type {
 	case discordgo.InteractionApplicationCommand:

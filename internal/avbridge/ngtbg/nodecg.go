@@ -17,6 +17,26 @@ type NodeCGReplicantDataMusicData struct {
 	Artist string `json:"artist"`
 }
 
+// NodeCGReplicantDataShoutboxEntry is equivalent to one Shout.
+type NodeCGReplicantDataShoutboxEntry struct {
+	// A unique ID for this message.
+	ID   string `json:"id"`
+	User struct {
+		// The name of the user who submitted this Shout.
+		Name string `json:"name"`
+		// The URL that their avatar can be found at.
+		Avatar string `json:"avatar_url"`
+	} `json:"user"`
+	// The timestamp of this shout.
+	Timestamp string `json:"timestamp"`
+	// The shout message content (in markdown).
+	Message string `json:"message"`
+}
+
+type NodeCGReplicantDataShoutboxEntries struct {
+	Shouts []NodeCGReplicantDataShoutboxEntry `json:"shouts"`
+}
+
 const (
 	// NodeCG Replicants
 
@@ -34,6 +54,9 @@ const (
 	// The data for the "alert" notification type. Object of type NodeCGReplicantDataAlertData
 	NodeCGReplicantNotificationAlertData = "notify:alert:data"
 
+	// A list of "shouts". Object of type NodeCGReplicantDataShoutboxEntries
+	NodeCGReplicantShoutbox = "shoutbox:messages"
+
 	// NodeCG Message channels
 
 	// Fire an "alert" message. Use NodeCGMessageAlert to construct.
@@ -43,4 +66,7 @@ const (
 	// Fire an "alert-end" message to animate out the alert. nil.
 	// Deprecated, removed in v53.2
 	//NodeCGMessageChannelAlertEnd = "alert-end"
+
+	// Fire an "shoutbox:message-new" message with the contents of a new Shout. Use NodeCGMessageShout to construct.
+	NodeCGMessageShoutboxNew = "shoutbox:new-discord"
 )

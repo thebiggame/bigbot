@@ -83,6 +83,10 @@ func (mod *TeamRoles) Start(ctx context.Context) (err error) {
 	return ctx.Err()
 }
 
+func (mod *TeamRoles) DiscordHandleMessage(session *discordgo.Session, message *discordgo.MessageCreate) (err error) {
+	return nil
+}
+
 func (mod *TeamRoles) DiscordHandleInteraction(s *discordgo.Session, i *discordgo.InteractionCreate) (handled bool, err error) {
 	switch i.Type {
 	case discordgo.InteractionApplicationCommand:

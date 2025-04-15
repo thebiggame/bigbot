@@ -11,6 +11,7 @@ import (
 	log "github.com/thebiggame/bigbot/internal/log"
 	"github.com/thebiggame/bigbot/internal/musicparty"
 	"github.com/thebiggame/bigbot/internal/notifications"
+	"github.com/thebiggame/bigbot/internal/shoutproxy"
 	"github.com/thebiggame/bigbot/internal/teamroles"
 	"golang.org/x/sync/errgroup"
 	"os"
@@ -23,6 +24,7 @@ type BotModule interface {
 	Start(context context.Context) error
 	DiscordCommands() ([]*discordgo.ApplicationCommand, error)
 	DiscordHandleInteraction(session *discordgo.Session, interaction *discordgo.InteractionCreate) (handled bool, err error)
+	DiscordHandleMessage(session *discordgo.Session, message *discordgo.MessageCreate) (err error)
 }
 
 type BigBot struct {
@@ -77,6 +79,13 @@ func (b *BigBot) WithLANModules() *BigBot {
 		panic(err)
 	}
 	b.modules = append(b.modules, modMusic)
+
+	// ShoutProxy
+	modShout, err := shoutproxy.New(b.DiscordSession)
+	if err != nil {
+		panic(err)
+	}
+	b.modules = append(b.modules, modShout)
 	return b
 }
 
@@ -122,6 +131,24 @@ func (b *BigBot) handleDiscordCommand(s *discordgo.Session, i *discordgo.Interac
 		}
 	}
 
+}
+
+func (b *BigBot) handleDiscordMessage(s *discordgo.Session, msg *discordgo.MessageCreate) {
+	// Ignore all messages created by the bot itself
+	if msg.Author.ID == s.State.User.ID {
+		return
+	}
+	g := new(errgroup.Group)
+	for _, m := range b.modules {
+		g.Go(func() error {
+			return m.DiscordHandleMessage(s, msg)
+		})
+	}
+	if err := g.Wait(); err != nil {
+		// Error occurred.
+		log.Error(err)
+		log.Debugf("Error occurred while processing: %s", msg.Message.ID)
+	}
 }
 
 func (b *BigBot) registerCommands() (err error) {
@@ -196,6 +223,9 @@ func (b *BigBot) Run() (err error) {
 		log.Infof("Logged in as: %v#%v", s.State.User.Username, s.State.User.Discriminator)
 	})
 
+	// Set appropriate intents.
+	b.DiscordSession.Identify.Intents = discordgo.MakeIntent(discordgo.IntentsGuilds | discordgo.IntentsGuildMessages | discordgo.IntentsMessageContent)
+
 	err = b.DiscordSession.Open()
 	if err != nil {
 		return fmt.Errorf("error opening discord connection: %w", err)
@@ -228,6 +258,7 @@ func (b *BigBot) Run() (err error) {
 	}
 
 	b.DiscordSession.AddHandler(b.handleDiscordCommand)
+	b.DiscordSession.AddHandler(b.handleDiscordMessage)
 
 	guilds, err := b.DiscordSession.UserGuilds(100, "", "", false)
 	log.Info("Running on servers:")
