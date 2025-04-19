@@ -3,7 +3,7 @@ package notifications
 import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/thebiggame/bigbot/internal/avbridge/ngtbg"
-	"github.com/thebiggame/bigbot/internal/avcomms"
+	bridge_wan "github.com/thebiggame/bigbot/internal/bridge-wan"
 	"github.com/thebiggame/bigbot/internal/config"
 	"github.com/thebiggame/bigbot/internal/helpers"
 	"github.com/thebiggame/bigbot/internal/log"
@@ -79,6 +79,10 @@ func (mod *Notifications) DiscordHandleInteraction(s *discordgo.Session, i *disc
 
 		switch options[0].Name {
 		case "alert":
+			// Check the bridge is available.
+			if !bridge_wan.BridgeIsAvailable() {
+				return true, helpers.DiscordInteractionEphemeralResponse(s, i, "👻 **Event Bridge is not available**")
+			}
 			// Let the client know we're working on it.
 			if helpers.DiscordDeferEphemeralInteraction(s, i) != nil {
 				return true, err
@@ -100,7 +104,7 @@ func (mod *Notifications) DiscordHandleInteraction(s *discordgo.Session, i *disc
 			if optionMap["delay"] != nil {
 				delay = optionMap["delay"].UintValue()
 			}
-			err := avcomms.NodeCG.ReplicantSet(*mod.ctx, config.RuntimeConfig.AV.NodeCG.BundleName, ngtbg.NodeCGReplicantNotificationAlertData, ngtbg.NodeCGReplicantDataAlertData{
+			err := bridge_wan.EventBridge.BrReplicantSet(config.RuntimeConfig.AV.NodeCG.BundleName, ngtbg.NodeCGReplicantNotificationAlertData, ngtbg.NodeCGReplicantDataAlertData{
 				Body:  name,
 				Flair: flair,
 				Delay: int(delay),
@@ -108,7 +112,7 @@ func (mod *Notifications) DiscordHandleInteraction(s *discordgo.Session, i *disc
 			if err != nil {
 				return true, err
 			}
-			err = avcomms.NodeCG.ReplicantSet(*mod.ctx, config.RuntimeConfig.AV.NodeCG.BundleName, ngtbg.NodeCGReplicantNotificationAlertActive, true)
+			err = bridge_wan.EventBridge.BrReplicantSet(config.RuntimeConfig.AV.NodeCG.BundleName, ngtbg.NodeCGReplicantNotificationAlertActive, true)
 			if err != nil {
 				return true, err
 			}
@@ -119,7 +123,7 @@ func (mod *Notifications) DiscordHandleInteraction(s *discordgo.Session, i *disc
 			if helpers.DiscordDeferEphemeralInteraction(s, i) != nil {
 				return true, err
 			}
-			err = avcomms.NodeCG.ReplicantSet(*mod.ctx, config.RuntimeConfig.AV.NodeCG.BundleName, ngtbg.NodeCGReplicantNotificationAlertActive, false)
+			err = bridge_wan.EventBridge.BrReplicantSet(config.RuntimeConfig.AV.NodeCG.BundleName, ngtbg.NodeCGReplicantNotificationAlertActive, false)
 			if err != nil {
 				return true, err
 			}
@@ -154,7 +158,7 @@ func (mod *Notifications) DiscordHandleInteraction(s *discordgo.Session, i *disc
 			if helpers.DiscordDeferEphemeralInteraction(s, i) != nil {
 				return true, err
 			}
-			err := avcomms.NodeCG.ReplicantSet(*mod.ctx, config.RuntimeConfig.AV.NodeCG.BundleName, ngtbg.NodeCGReplicantEventInfoActive, false)
+			err := bridge_wan.EventBridge.BrReplicantSet(config.RuntimeConfig.AV.NodeCG.BundleName, ngtbg.NodeCGReplicantEventInfoActive, false)
 			if err != nil {
 				return true, err
 			}
@@ -179,13 +183,13 @@ func (mod *Notifications) DiscordHandleInteraction(s *discordgo.Session, i *disc
 			name := data.Components[0].(*discordgo.ActionsRow).Components[0].(*discordgo.TextInput).Value
 
 			// First attempt to set the information body.
-			err := avcomms.NodeCG.ReplicantSet(*mod.ctx, config.RuntimeConfig.AV.NodeCG.BundleName, ngtbg.NodeCGReplicantEventInfoBody, name)
+			err := bridge_wan.EventBridge.BrReplicantSet(config.RuntimeConfig.AV.NodeCG.BundleName, ngtbg.NodeCGReplicantEventInfoBody, name)
 			if err != nil {
 				// NodeCG not available for some reason.
 				log.Infof("NodeCG not available: %s", err)
 			} else {
 				// Then set it to active (plays the announcement chime & displays it)
-				err = avcomms.NodeCG.ReplicantSet(*mod.ctx, config.RuntimeConfig.AV.NodeCG.BundleName, ngtbg.NodeCGReplicantEventInfoActive, true)
+				err = bridge_wan.EventBridge.BrReplicantSet(config.RuntimeConfig.AV.NodeCG.BundleName, ngtbg.NodeCGReplicantEventInfoActive, true)
 				if err != nil {
 					return true, err
 				}

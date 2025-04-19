@@ -1,0 +1,44 @@
+syntax = 'proto3';
+
+option go_package = 'github.com/thebiggame/bigbot/proto';
+
+message ServerEvent {
+  string request_id = 1;
+  oneof event {
+    Welcome welcome = 2;
+    Ping ping = 3;
+    NodecgReplicantSet nodecg_replicant_set = 4;
+  }
+}
+
+message Welcome {
+  string version = 1;
+}
+
+message Ping {
+}
+
+message NodecgReplicantSet {
+  string namespace = 1;
+  string replicant = 2;
+  bytes data = 3;
+}
+
+
+message ClientEvent {
+  oneof event {
+    Authenticate authenticate = 1;
+    Ping ping = 2;
+    RPCResponse rpc_response = 3;
+  }
+}
+
+message Authenticate {
+  string key = 1;
+}
+
+message RPCResponse {
+  string request_id = 1;
+  int32 status_code = 2;
+  string error_message = 3;
+}

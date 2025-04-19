@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/bwmarrin/discordgo"
 	"github.com/thebiggame/bigbot/internal/avbridge"
+	bridge_wan "github.com/thebiggame/bigbot/internal/bridge-wan"
 	"github.com/thebiggame/bigbot/internal/config"
 	"github.com/thebiggame/bigbot/internal/helpers"
 	log "github.com/thebiggame/bigbot/internal/log"
@@ -53,6 +54,13 @@ func (b *BigBot) WithWANModules() *BigBot {
 	// teamRoles
 	module := teamroles.New(b.DiscordSession)
 	b.modules = append(b.modules, module)
+
+	// bridge
+	modBridge, err := bridge_wan.New()
+	if err != nil {
+		panic(err)
+	}
+	b.modules = append(b.modules, modBridge)
 	return b
 }
 

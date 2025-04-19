@@ -7,11 +7,21 @@ import (
 	"github.com/thebiggame/bigbot/pkg/nodecg"
 )
 
-func Init() (err error) {
+func InitOld() (err error) {
 	if isInitialised {
 		return
 	}
 	NodeCG = nodecg.New(config.RuntimeConfig.AV.NodeCG.Hostname).WithKey(config.RuntimeConfig.AV.NodeCG.AuthenticationKey)
+
+	isInitialised = true
+	return
+}
+
+func Init(hostname, key string) (err error) {
+	if isInitialised {
+		return
+	}
+	NodeCG = nodecg.New(hostname).WithKey(key)
 
 	isInitialised = true
 	return

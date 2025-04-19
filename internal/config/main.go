@@ -3,6 +3,11 @@ package config
 
 // Config defines the format of the application configuration.
 type Config struct {
+	Bridge struct {
+		Enabled bool   `long:"enabled" description:"Enable the BIGbot -> Bridge Server" default:"false" env:"ENABLED"`
+		Address string `long:"listen" description:"Listen address and port" default:"localhost:8080" env:"LISTEN"`
+		Key     string `long:"key" description:"BIGbot authentication key" env:"KEY"`
+	} `prefix:"bridge." embed:"" envprefix:"BRIDGE_"`
 	Discord struct {
 		Token         string `short:"t" long:"token" help:"Discord bot token" required:"" env:"TOKEN"`
 		GuildID       string `long:"guildID" help:"Discord guild ID to monitor" default:"" env:"GUILD"`

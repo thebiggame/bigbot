@@ -15,9 +15,9 @@ type AVBridge struct {
 }
 
 func New(discord *discordgo.Session) (bridge *AVBridge, err error) {
-	// Init AV session handlers in avcomms
+	// InitOld AV session handlers in avcomms
 	// Unbind this tight integration perhaps?
-	err = avcomms.Init()
+	err = avcomms.InitOld()
 	if err != nil {
 		return nil, err
 	}
