@@ -8,6 +8,8 @@ message ServerEvent {
     Welcome welcome = 2;
     Ping ping = 3;
     NodecgReplicantSet nodecg_replicant_set = 4;
+    NodecgReplicantGet nodecg_replicant_get = 5;
+    NodecgMessageSend nodecg_message = 6;
   }
 }
 
@@ -23,6 +25,18 @@ message NodecgReplicantSet {
   string replicant = 2;
   bytes data = 3;
 }
+
+message NodecgReplicantGet {
+  string namespace = 1;
+  string replicant = 2;
+}
+
+message NodecgMessageSend {
+  string namespace = 1;
+  string channel = 2;
+  bytes data = 3;
+}
+
 
 
 message ClientEvent {
@@ -41,4 +55,11 @@ message RPCResponse {
   string request_id = 1;
   int32 status_code = 2;
   string error_message = 3;
+  oneof payload {
+    NodecgReplicantGetResponse ncg_replicant_get = 4;
+  }
+}
+
+message NodecgReplicantGetResponse {
+  bytes replicant = 1;
 }

@@ -3,7 +3,7 @@ package shoutproxy
 import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/thebiggame/bigbot/internal/avbridge/ngtbg"
-	"github.com/thebiggame/bigbot/internal/avcomms"
+	bridge_wan "github.com/thebiggame/bigbot/internal/bridge-wan"
 	"github.com/thebiggame/bigbot/internal/config"
 	"github.com/thebiggame/bigbot/internal/log"
 	"time"
@@ -44,7 +44,9 @@ func (mod *ShoutProxy) DiscordHandleMessage(s *discordgo.Session, m *discordgo.M
 			Timestamp: m.Message.Timestamp.Format(time.RFC3339),
 			Message:   m.Message.Content,
 		}
-		err := avcomms.NodeCG.MessageSend(*mod.ctx, config.RuntimeConfig.AV.NodeCG.BundleName, ngtbg.NodeCGMessageShoutboxNew, shoutEntry)
+		if bridge_wan.BridgeIsAvailable() {
+			err = bridge_wan.EventBridge.BrMessageSend(config.RuntimeConfig.AV.NodeCG.BundleName, ngtbg.NodeCGMessageShoutboxNew, shoutEntry)
+		}
 		// err = avcomms.NodeCG.ReplicantSet(*mod.ctx, config.RuntimeConfig.AV.NodeCG.BundleName, ngtbg.NodeCGReplicantShoutbox, shoutboxEntries)
 		return err
 	}

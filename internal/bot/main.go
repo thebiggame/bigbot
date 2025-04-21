@@ -122,7 +122,7 @@ func (b *BigBot) handleDiscordCommand(s *discordgo.Session, i *discordgo.Interac
 		log.Debugf("Error occurred while processing: %s", i.Interaction.Data)
 		// Figure out how to report it.
 		var content string
-		if IsCrew, err := helpers.UserIsCrew(s, i.GuildID, i.Member.User); err != nil && IsCrew {
+		if IsCrew, errHlpr := helpers.UserIsCrew(s, i.GuildID, i.Member.User); errHlpr == nil && IsCrew {
 			content = fmt.Sprintf("🚫 **An error occurred while processing your command:**\n```%s```", err)
 		} else {
 			content = "🚫 **An error occurred while processing your command. Please contact a member of theBIGGAME Crew.**"

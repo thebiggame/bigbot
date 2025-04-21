@@ -19,8 +19,8 @@ const (
 	nodecgReplicantPrefix = "/replicant"
 	nodecgRestPrefix      = "/rest"
 
-	nodecgStatusSuccess = "OK"
-	nodecgStatusError   = "ERROR"
+	StatusSuccess = "OK"
+	StatusError   = "ERROR"
 )
 
 var (
@@ -47,7 +47,7 @@ func (s *NodeCGServer) WithKey(key string) *NodeCGServer {
 	return s
 }
 
-type replicantResponse struct {
+type ReplicantResponse struct {
 	Status  string `json:"status"`
 	Message string `json:"message,omitempty"`
 
@@ -129,16 +129,18 @@ func (s *NodeCGServer) ReplicantGetDecode(ctx context.Context, bundle, replicant
 		}
 	}
 
-	var resp replicantResponse
+	var resp ReplicantResponse
 	err = json.NewDecoder(respData.Body).Decode(&resp)
 	if err != nil {
 		return err
 	}
-	if resp.Status != nodecgStatusSuccess {
+	if resp.Status != StatusSuccess {
 		return fmt.Errorf("%w: %s", ErrNodeCGGeneralError, resp.Message)
 	}
 
-	err = json.Unmarshal(resp.Value, target)
+	if resp.Value != nil {
+		err = json.Unmarshal(resp.Value, target)
+	}
 
 	return err
 }
@@ -182,12 +184,12 @@ func (s *NodeCGServer) ReplicantSet(ctx context.Context, bundle string, replican
 			return ErrNodeCGUnknownError
 		}
 	}
-	var resp replicantResponse
+	var resp ReplicantResponse
 	err = json.NewDecoder(respData.Body).Decode(&resp)
 	if err != nil {
 		return err
 	}
-	if resp.Status != nodecgStatusSuccess {
+	if resp.Status != StatusSuccess {
 		return fmt.Errorf("%w: %s", ErrNodeCGGeneralError, resp.Message)
 	}
 	return nil
@@ -232,12 +234,12 @@ func (s *NodeCGServer) MessageSend(ctx context.Context, bundle, messageChannel s
 			return ErrNodeCGUnknownError
 		}
 	}
-	var resp replicantResponse
+	var resp ReplicantResponse
 	err = json.NewDecoder(respData.Body).Decode(&resp)
 	if err != nil {
 		return err
 	}
-	if resp.Status != nodecgStatusSuccess {
+	if resp.Status != StatusSuccess {
 		return fmt.Errorf("%w: %s", ErrNodeCGGeneralError, resp.Message)
 	}
 	return nil

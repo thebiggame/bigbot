@@ -84,14 +84,6 @@ func (bridge *BridgeLAN) doAuth() error {
 	return nil
 }
 
-func (bridge *BridgeLAN) handleNodeCGReplicantSet(event *protodef.ServerEvent_NodecgReplicantSet) error {
-	err := avcomms.NodeCG.ReplicantSet(*bridge.ctx, event.NodecgReplicantSet.Namespace, event.NodecgReplicantSet.Replicant, event.NodecgReplicantSet.Data)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func (bridge *BridgeLAN) Start(ctx context.Context) (err error) {
 	bridge.ctx = &ctx
 	log.Infof("Connecting to BIGbot at %s...", bridge.config.WsAddress)
@@ -147,6 +139,38 @@ func (bridge *BridgeLAN) Start(ctx context.Context) (err error) {
 						log.Info("ping: %s", ev)
 						// handlePing(clientEvent.GetPing(), c)
 					}
+				case *protodef.ServerEvent_NodecgMessage:
+					{
+						log.Debug("NodeCGMessage received: %s", ev)
+						err := bridge.handleNodeCGMessageSend(ev)
+						var sCode int32
+						if err != nil {
+							log.Errorf("handleNodeCGMessage error: %s", err)
+							sCode = 500
+						}
+						var errData string
+						if err != nil {
+							errData = err.Error()
+						}
+
+						response := &protodef.ClientEvent{
+							Event: &protodef.ClientEvent_RpcResponse{
+								RpcResponse: &protodef.RPCResponse{
+									RequestId:    event.RequestId,
+									StatusCode:   sCode,
+									ErrorMessage: errData,
+								},
+							},
+						}
+						msg, err := proto.Marshal(response)
+						if err != nil {
+							log.Errorf("marshalling error: %s", err)
+						}
+						err = bridge.conn.WriteMessage(websocket.BinaryMessage, msg)
+						if err != nil {
+							log.Errorf("write error: %s", err)
+						}
+					}
 				case *protodef.ServerEvent_NodecgReplicantSet:
 					{
 						log.Debug("NodeCGReplicantSet received: %s", ev)
@@ -156,13 +180,54 @@ func (bridge *BridgeLAN) Start(ctx context.Context) (err error) {
 							log.Errorf("handleNodeCGReplicantSet error: %s", err)
 							sCode = 500
 						}
+						var errData string
+						if err != nil {
+							errData = err.Error()
+						}
 
 						response := &protodef.ClientEvent{
 							Event: &protodef.ClientEvent_RpcResponse{
 								RpcResponse: &protodef.RPCResponse{
 									RequestId:    event.RequestId,
 									StatusCode:   sCode,
-									ErrorMessage: err.Error(),
+									ErrorMessage: errData,
+								},
+							},
+						}
+						msg, err := proto.Marshal(response)
+						if err != nil {
+							log.Errorf("marshalling error: %s", err)
+						}
+						err = bridge.conn.WriteMessage(websocket.BinaryMessage, msg)
+						if err != nil {
+							log.Errorf("write error: %s", err)
+						}
+					}
+				case *protodef.ServerEvent_NodecgReplicantGet:
+					{
+						log.Debug("NodeCGReplicantGet received: %s", ev)
+						data, err := bridge.handleNodeCGReplicantGet(ev)
+						var sCode int32
+						if err != nil {
+							log.Errorf("handleNodeCGReplicantGet error: %s", err)
+							sCode = 500
+						}
+						var errData string
+						if err != nil {
+							errData = err.Error()
+						}
+
+						response := &protodef.ClientEvent{
+							Event: &protodef.ClientEvent_RpcResponse{
+								RpcResponse: &protodef.RPCResponse{
+									RequestId:    event.RequestId,
+									StatusCode:   sCode,
+									ErrorMessage: errData,
+									Payload: &protodef.RPCResponse_NcgReplicantGet{
+										NcgReplicantGet: &protodef.NodecgReplicantGetResponse{
+											Replicant: data,
+										},
+									},
 								},
 							},
 						}

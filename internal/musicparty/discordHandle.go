@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/bwmarrin/discordgo"
 	"github.com/thebiggame/bigbot/internal/avbridge/ngtbg"
-	"github.com/thebiggame/bigbot/internal/avcomms"
+	bridge_wan "github.com/thebiggame/bigbot/internal/bridge-wan"
 	"github.com/thebiggame/bigbot/internal/config"
 	"github.com/thebiggame/bigbot/internal/helpers"
 )
@@ -30,8 +30,12 @@ func (mod *MusicParty) DiscordHandleInteraction(s *discordgo.Session, i *discord
 
 		// Get music data (if available)
 		// Right now this just calls out to NodeCG. Going forward, we'll do this with MusicParty directly.
+		// Check the bridge is available.
+		if !bridge_wan.BridgeIsAvailable() {
+			return true, helpers.DiscordInteractionEphemeralResponse(s, i, "👻 **Event Bridge is not available**")
+		}
 		var data ngtbg.NodeCGReplicantDataMusicData
-		err = avcomms.NodeCG.ReplicantGetDecode(*mod.ctx, config.RuntimeConfig.AV.NodeCG.BundleName, ngtbg.NodeCGReplicantMusicData, &data)
+		err = bridge_wan.EventBridge.BrReplicantGet(config.RuntimeConfig.AV.NodeCG.BundleName, ngtbg.NodeCGReplicantMusicData, &data)
 		if err != nil {
 			return true, err
 		}
