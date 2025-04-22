@@ -3,7 +3,6 @@ package bridge_wan
 import (
 	"context"
 	"errors"
-	"fmt"
 	"github.com/gorilla/websocket"
 	"github.com/thebiggame/bigbot/internal/log"
 	protodef "github.com/thebiggame/bigbot/proto"
@@ -93,14 +92,14 @@ func (bridge *BridgeWAN) wsHandle(w http.ResponseWriter, r *http.Request) {
 			logger.Warn("failed to read message from wire", slog.Any("error", err))
 			break
 		}
-		logger.Log(context.Background(), log.LevelTrace, "received: %s", message)
+		logger.Log(context.Background(), log.LevelTrace, "received protobuf", slog.Any("payload", message))
 		clientEvent := &protodef.ClientEvent{}
 		err = proto.Unmarshal(message, clientEvent)
 		if err != nil {
 			logger.Error("unmarshaling error", slog.Any("error", err))
 			continue
 		}
-		logger.Log(context.Background(), log.LevelTrace, fmt.Sprintf("unmarshalled: %s", clientEvent))
+		logger.Log(context.Background(), log.LevelTrace, "unmarshalled protobuf", slog.Any("event", clientEvent))
 
 		switch event := clientEvent.Event.(type) {
 		case *protodef.ClientEvent_Ping:
