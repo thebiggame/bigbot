@@ -3,7 +3,6 @@ package avbridge
 import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/thebiggame/bigbot/internal/avbridge/ngtbg"
-	"github.com/thebiggame/bigbot/internal/avcomms"
 	bridge_wan "github.com/thebiggame/bigbot/internal/bridge-wan"
 	"github.com/thebiggame/bigbot/internal/helpers"
 )
@@ -50,15 +49,14 @@ func (mod *AVBridge) DiscordHandleInteraction(s *discordgo.Session, i *discordgo
 
 		switch options[0].Name {
 		case "status":
-			if avcomms.GoobsIsConnected() {
-				content = "🙆 OBS is connected."
+			if bridge_wan.BridgeIsAvailable() {
+				content = "🙆 Event Bridge is connected."
 			} else {
-				content = "🙅 OBS is **not connected.**"
+				content = "🙅 Event Bridge is **not connected.**"
 			}
 		case "ftb":
-			if !avcomms.GoobsIsConnected() {
-				content = "🙅 OBS is **not connected.**"
-				break
+			if !bridge_wan.BridgeIsAvailable() {
+				return true, helpers.DiscordInteractionEphemeralResponse(s, i, "👻 **Event Bridge is not available**")
 			}
 			// Let the client know we're working on it.
 			if helpers.DiscordDeferEphemeralInteraction(s, i) != nil {
@@ -66,9 +64,8 @@ func (mod *AVBridge) DiscordHandleInteraction(s *discordgo.Session, i *discordgo
 			}
 			return true, mod.discordCommandAVFTB(s, i)
 		case "infoboard":
-			if !avcomms.GoobsIsConnected() {
-				content = "🙅 OBS is **not connected.**"
-				break
+			if !bridge_wan.BridgeIsAvailable() {
+				return true, helpers.DiscordInteractionEphemeralResponse(s, i, "👻 **Event Bridge is not available**")
 			}
 			// Let the client know we're working on it.
 			if helpers.DiscordDeferEphemeralInteraction(s, i) != nil {
