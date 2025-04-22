@@ -152,66 +152,17 @@ func (bridge *BridgeLAN) Start(ctx context.Context) (err error) {
 				case *protodef.ServerEvent_NodecgMessage:
 					{
 						logger.Debug("NodeCGMessage received")
-
-						err := bridge.handleNodeCGMessageSend(ev)
-						var sCode int32
+						err := protoResponse(bridge.conn, event.RequestId, bridge.handleNodeCGMessageSend(ev))
 						if err != nil {
-							logger.Error("handleNodeCGMessage error", slog.Any("error", err))
-							sCode = 500
-						}
-						var errData string
-						if err != nil {
-							errData = err.Error()
-						}
-
-						response := &protodef.ClientEvent{
-							Event: &protodef.ClientEvent_RpcResponse{
-								RpcResponse: &protodef.RPCResponse{
-									RequestId:    event.RequestId,
-									StatusCode:   sCode,
-									ErrorMessage: errData,
-								},
-							},
-						}
-						msg, err := proto.Marshal(response)
-						if err != nil {
-							logger.Error("marshalling error", slog.Any("error", err))
-						}
-						err = bridge.conn.WriteMessage(websocket.BinaryMessage, msg)
-						if err != nil {
-							logger.Error("write error", slog.Any("error", err))
+							logger.Error("NodeCGMessageSend error", slog.Any("error", err))
 						}
 					}
 				case *protodef.ServerEvent_NodecgReplicantSet:
 					{
 						logger.Debug("NodeCGReplicantSet received")
-						err := bridge.handleNodeCGReplicantSet(ev)
-						var sCode int32
+						err := protoResponse(bridge.conn, event.RequestId, bridge.handleNodeCGReplicantSet(ev))
 						if err != nil {
-							logger.Error("handleNodeCGReplicantSet error", slog.Any("error", err))
-							sCode = 500
-						}
-						var errData string
-						if err != nil {
-							errData = err.Error()
-						}
-
-						response := &protodef.ClientEvent{
-							Event: &protodef.ClientEvent_RpcResponse{
-								RpcResponse: &protodef.RPCResponse{
-									RequestId:    event.RequestId,
-									StatusCode:   sCode,
-									ErrorMessage: errData,
-								},
-							},
-						}
-						msg, err := proto.Marshal(response)
-						if err != nil {
-							logger.Error("marshalling error", slog.Any("error", err))
-						}
-						err = bridge.conn.WriteMessage(websocket.BinaryMessage, msg)
-						if err != nil {
-							logger.Error("write error", slog.Any("error", err))
+							logger.Error("NodeCGReplicantSet error", slog.Any("error", err))
 						}
 					}
 				case *protodef.ServerEvent_NodecgReplicantGet:
@@ -251,6 +202,14 @@ func (bridge *BridgeLAN) Start(ctx context.Context) (err error) {
 							logger.Error("write error", slog.Any("error", err))
 						}
 					}
+				case *protodef.ServerEvent_ObsSceneTransition:
+					{
+						logger.Debug("ObsSceneTransition received")
+						err := protoResponse(bridge.conn, event.RequestId, bridge.handleOBSSceneTransition(ev))
+						if err != nil {
+							logger.Error("ObsSceneTransition error", slog.Any("error", err))
+						}
+					}
 				}
 			}
 		}
@@ -278,10 +237,10 @@ func (bridge *BridgeLAN) Start(ctx context.Context) (err error) {
 	})
 
 	// Closedown the context.
-	if closeErr := g.Wait(); closeErr == nil || errors.Is(closeErr, context.Canceled) || websocket.IsCloseError(closeErr, websocket.CloseNormalClosure) {
+	if err := g.Wait(); err == nil || errors.Is(err, context.Canceled) || websocket.IsCloseError(err, websocket.CloseNormalClosure) {
 		logger.Info("Bridge stopped gracefully.")
 	} else {
 		logger.Warn("Error during shutdown", slog.Any("error", err))
 	}
-	return
+	return err
 }

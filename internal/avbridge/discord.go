@@ -1,11 +1,10 @@
 package avbridge
 
 import (
-	"github.com/andreykaipov/goobs/api/requests/scenes"
-	"github.com/andreykaipov/goobs/api/requests/transitions"
 	"github.com/bwmarrin/discordgo"
 	"github.com/thebiggame/bigbot/internal/avbridge/ngtbg"
 	"github.com/thebiggame/bigbot/internal/avcomms"
+	bridge_wan "github.com/thebiggame/bigbot/internal/bridge-wan"
 	"github.com/thebiggame/bigbot/internal/helpers"
 )
 
@@ -88,22 +87,7 @@ func (mod *AVBridge) DiscordHandleInteraction(s *discordgo.Session, i *discordgo
 }
 
 func (mod *AVBridge) discordCommandAVFTB(s *discordgo.Session, i *discordgo.InteractionCreate) (err error) {
-	// Set preview scene to black...
-	_, err = avcomms.OBS.Scenes.SetCurrentPreviewScene(&scenes.SetCurrentPreviewSceneParams{
-		SceneName: &ngtbg.OBSSceneBlack,
-	})
-	if err != nil {
-		return err
-	}
-
-	// then transition to it.
-	_, err = avcomms.OBS.Transitions.SetCurrentSceneTransition(&transitions.SetCurrentSceneTransitionParams{
-		TransitionName: &ngtbg.OBSTransFade,
-	})
-	if err != nil {
-		return err
-	}
-	_, err = avcomms.OBS.Transitions.TriggerStudioModeTransition(&transitions.TriggerStudioModeTransitionParams{})
+	err = bridge_wan.EventBridge.OBSSceneTransition(ngtbg.OBSSceneBlack, ngtbg.OBSTransFade)
 	if err != nil {
 		return err
 	}
@@ -114,22 +98,7 @@ func (mod *AVBridge) discordCommandAVFTB(s *discordgo.Session, i *discordgo.Inte
 }
 
 func (mod *AVBridge) discordCommandAVInfoboard(s *discordgo.Session, i *discordgo.InteractionCreate) (err error) {
-	// Set preview scene to Infoboard...
-	_, err = avcomms.OBS.Scenes.SetCurrentPreviewScene(&scenes.SetCurrentPreviewSceneParams{
-		SceneName: &ngtbg.OBSSceneDefault,
-	})
-	if err != nil {
-		return err
-	}
-
-	// then transition to it.
-	_, err = avcomms.OBS.Transitions.SetCurrentSceneTransition(&transitions.SetCurrentSceneTransitionParams{
-		TransitionName: &ngtbg.OBSTransStingModernWipe,
-	})
-	if err != nil {
-		return err
-	}
-	_, err = avcomms.OBS.Transitions.TriggerStudioModeTransition(&transitions.TriggerStudioModeTransitionParams{})
+	err = bridge_wan.EventBridge.OBSSceneTransition(ngtbg.OBSSceneDefault, ngtbg.OBSTransStingModernWipe)
 	if err != nil {
 		return err
 	}

@@ -2,6 +2,8 @@ package bridge_lan
 
 import (
 	"encoding/json"
+	"github.com/andreykaipov/goobs/api/requests/scenes"
+	"github.com/andreykaipov/goobs/api/requests/transitions"
 	"github.com/thebiggame/bigbot/internal/avcomms"
 	"github.com/thebiggame/bigbot/proto"
 )
@@ -29,4 +31,27 @@ func (bridge *BridgeLAN) handleNodeCGReplicantGet(event *proto.ServerEvent_Nodec
 	}
 	data, err = json.Marshal(repData)
 	return data, err
+}
+
+func (bridge *BridgeLAN) handleOBSSceneTransition(event *proto.ServerEvent_ObsSceneTransition) (err error) {
+	// Set preview scene to the target
+	_, err = avcomms.OBS.Scenes.SetCurrentPreviewScene(&scenes.SetCurrentPreviewSceneParams{
+		SceneName: &event.ObsSceneTransition.SceneTarget,
+	})
+	if err != nil {
+		return err
+	}
+
+	// set the desired transition
+	_, err = avcomms.OBS.Transitions.SetCurrentSceneTransition(&transitions.SetCurrentSceneTransitionParams{
+		TransitionName: &event.ObsSceneTransition.Transition,
+	})
+	if err != nil {
+		return err
+	}
+
+	// then perform the transition
+	_, err = avcomms.OBS.Transitions.TriggerStudioModeTransition(&transitions.TriggerStudioModeTransitionParams{})
+
+	return err
 }

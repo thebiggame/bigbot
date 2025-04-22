@@ -10,6 +10,7 @@ message ServerEvent {
     NodecgReplicantSet nodecg_replicant_set = 4;
     NodecgReplicantGet nodecg_replicant_get = 5;
     NodecgMessageSend nodecg_message = 6;
+    OBSSceneTransition obs_scene_transition = 7;
   }
 }
 
@@ -35,6 +36,12 @@ message NodecgMessageSend {
   string namespace = 1;
   string channel = 2;
   bytes data = 3;
+}
+
+// OBS messages
+message OBSSceneTransition {
+  string scene_target = 1;
+  string transition = 2;
 }
 
 
