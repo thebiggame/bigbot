@@ -15,14 +15,17 @@ import (
 	"github.com/thebiggame/bigbot/internal/shoutproxy"
 	"github.com/thebiggame/bigbot/internal/teamroles"
 	"golang.org/x/sync/errgroup"
+	"log/slog"
 	"os"
 	"os/signal"
 	"reflect"
+	"strings"
 	"syscall"
 )
 
 type BotModule interface {
 	Start(context context.Context) error
+	SetLogger(logger *slog.Logger)
 	DiscordCommands() ([]*discordgo.ApplicationCommand, error)
 	DiscordHandleInteraction(session *discordgo.Session, interaction *discordgo.InteractionCreate) (handled bool, err error)
 	DiscordHandleMessage(session *discordgo.Session, message *discordgo.MessageCreate) (err error)
@@ -31,6 +34,7 @@ type BotModule interface {
 type BigBot struct {
 	DiscordSession *discordgo.Session
 	commands       []*discordgo.ApplicationCommand
+	logger         *slog.Logger
 	modules        []BotModule
 }
 
@@ -44,6 +48,7 @@ func New() (*BigBot, error) {
 	// create primary bot object and return it
 	bot := &BigBot{
 		DiscordSession: DiscordSession,
+		logger:         log.Logger.With(slog.String("module", "main")),
 	}
 	return bot, nil
 }
@@ -60,6 +65,7 @@ func (b *BigBot) WithWANModules() *BigBot {
 	if err != nil {
 		panic(err)
 	}
+	modBridge.SetLogger(b.logger.With(slog.String("module", "bridge_wan")))
 	b.modules = append(b.modules, modBridge)
 	return b
 }
@@ -105,11 +111,11 @@ func (b *BigBot) handleDiscordCommand(s *discordgo.Session, i *discordgo.Interac
 			if handled {
 				switch i.Type {
 				case discordgo.InteractionApplicationCommand:
-					log.Debugf("Module %s handled command %v", reflect.TypeOf(m).Elem().Name(), i.ApplicationCommandData().Name)
+					b.logger.Debug("Module handled command", slog.String("module", reflect.TypeOf(m).Elem().Name()), slog.String("command", i.ApplicationCommandData().Name))
 				case discordgo.InteractionModalSubmit:
-					log.Debugf("Module %s handled modal response for %v", reflect.TypeOf(m).Elem().Name(), i.ModalSubmitData().CustomID)
+					b.logger.Debug("Module handled modal.submit", slog.String("module", reflect.TypeOf(m).Elem().Name()), slog.String("modal_id", i.ModalSubmitData().CustomID))
 				default:
-					log.Warnf("Module %s handled command of unexpected type", reflect.TypeOf(m).Elem().Name())
+					b.logger.Warn("Module handled command of unexpected type", slog.String("module", reflect.TypeOf(m).Elem().Name()))
 				}
 
 			}
@@ -118,8 +124,7 @@ func (b *BigBot) handleDiscordCommand(s *discordgo.Session, i *discordgo.Interac
 	}
 	if err := g.Wait(); err != nil {
 		// Error occurred.
-		log.Error(err)
-		log.Debugf("Error occurred while processing: %s", i.Interaction.Data)
+		b.logger.Error("error handling discord command", slog.String("discord_command", fmt.Sprint(i.Interaction.Data)), slog.Any("error", err))
 		// Figure out how to report it.
 		var content string
 		if IsCrew, errHlpr := helpers.UserIsCrew(s, i.GuildID, i.Member.User); errHlpr == nil && IsCrew {
@@ -135,7 +140,7 @@ func (b *BigBot) handleDiscordCommand(s *discordgo.Session, i *discordgo.Interac
 			},
 		})
 		if err != nil {
-			log.Errorf("Error returning log to client for slash command: %v", err)
+			b.logger.Error("Error returning log to client for slash command", slog.Any("error", err))
 		}
 	}
 
@@ -154,8 +159,7 @@ func (b *BigBot) handleDiscordMessage(s *discordgo.Session, msg *discordgo.Messa
 	}
 	if err := g.Wait(); err != nil {
 		// Error occurred.
-		log.Error(err)
-		log.Debugf("Error occurred while processing: %s", msg.Message.ID)
+		b.logger.Error("error handling discord message", slog.String("discord_msg_id", fmt.Sprint(msg.Message.ID)), slog.Any("error", err))
 	}
 }
 
@@ -190,11 +194,11 @@ func (b *BigBot) registerCommands() (err error) {
 			// err is scoped correctly here.
 			if guildCmd != nil && guildCmd.ID != "" {
 				// A command already exists on the server, just update it.
-				log.Debugf("Command %s already exists on the guild, updating", cmd.Name)
+				b.logger.Debug("Updating already-present command", slog.String("command", cmd.Name))
 				cmd, err = b.DiscordSession.ApplicationCommandEdit(b.DiscordSession.State.User.ID, config.RuntimeConfig.Discord.GuildID, guildCmd.ID, cmd)
 			} else {
 				// We need a new guild command.
-				log.Debugf("Command %s does not exist on the guild, creating new", cmd.Name)
+				b.logger.Debug("Creating non-existent command", slog.String("command", cmd.Name))
 				cmd, err = b.DiscordSession.ApplicationCommandCreate(b.DiscordSession.State.User.ID, config.RuntimeConfig.Discord.GuildID, cmd)
 			}
 
@@ -216,9 +220,9 @@ func (b *BigBot) TeardownCommands() error {
 		if err != nil {
 			return fmt.Errorf("error removing command %s: %w", cmd.Name, err)
 		}
-		log.Debugf("Removed command %s", cmd.Name)
+		b.logger.Debug(fmt.Sprintf("Removed command %s", cmd.Name))
 	}
-	log.Info("Commands have been removed successfully.")
+	b.logger.Info("Commands have been removed successfully.")
 	return nil
 }
 
@@ -228,7 +232,7 @@ func (b *BigBot) Run() (err error) {
 	}
 
 	b.DiscordSession.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
-		log.Infof("Logged in as: %v#%v", s.State.User.Username, s.State.User.Discriminator)
+		b.logger.Info(fmt.Sprintf("Logged in as: %v#%v", s.State.User.Username, s.State.User.Discriminator))
 	})
 
 	// Set appropriate intents.
@@ -256,10 +260,12 @@ func (b *BigBot) Run() (err error) {
 	g, gCtx := errgroup.WithContext(ctx)
 
 	for _, module := range b.modules {
+		module.SetLogger(log.Logger.With(
+			slog.String("module_name", reflect.TypeOf(module).Elem().Name())))
 		g.Go(func() error {
 			err := module.Start(gCtx)
 			if err != nil && !errors.Is(err, context.Canceled) {
-				log.Errorf("error with module %v: %v", reflect.TypeOf(module), err)
+				b.logger.Error("error in module start routine", slog.String("module", reflect.TypeOf(module).String()), slog.Any("error", err))
 			}
 			return err
 		})
@@ -269,29 +275,31 @@ func (b *BigBot) Run() (err error) {
 	b.DiscordSession.AddHandler(b.handleDiscordMessage)
 
 	guilds, err := b.DiscordSession.UserGuilds(100, "", "", false)
-	log.Info("Running on servers:")
-	if len(guilds) == 0 {
-		log.Info("\t(none)")
-	} else {
+
+	var guildString = "(none)"
+	if len(guilds) != 0 {
+		guildString = ""
 		for index := range guilds {
 			guild := guilds[index]
-			log.Info("\t", guild.Name, " (", guild.ID, ")")
+			guildString = fmt.Sprintf("%s %s (%s), ", guildString, guild.Name, guild.ID)
 		}
+		guildString = strings.TrimRight(guildString, ", ")
 	}
+	b.logger.Info(fmt.Sprintf("Running on servers: %s", guildString))
 
-	log.Infof("Join URL: https://discordapp.com/api/oauth2/authorize?scope=bot&permissions=268446720&client_id=%s", b.DiscordSession.State.User.ID)
-	log.Info("Bot running. CTRL-C to exit.")
+	b.logger.Info(fmt.Sprintf("Join URL: https://discordapp.com/api/oauth2/authorize?scope=bot&permissions=268446720&client_id=%s", b.DiscordSession.State.User.ID))
+	b.logger.Info("Bot running. CTRL-C to exit.")
 
 	// Await app context completion (i.e usually a SIGTERM / interrupt).
 	<-ctx.Done()
 
-	log.Info("Bot stopping...")
+	b.logger.Info("Bot stopping...")
 
 	// Closedown the context.
 	if closeErr := g.Wait(); closeErr == nil || errors.Is(closeErr, context.Canceled) {
-		log.Info("Bot stopped gracefully.")
+		b.logger.Info("Bot stopped gracefully.")
 	} else {
-		log.Warn("Error during shutdown: %v", closeErr)
+		b.logger.Error("Error during shutdown", slog.Any("error", err))
 	}
 	return
 

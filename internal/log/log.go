@@ -1,74 +1,42 @@
 package log
 
 import (
-	"fmt"
-	"log"
+	"log/slog"
 	"os"
 )
 
-var Logger *log.Logger
+const (
+	LevelTrace = slog.Level(-8)
+	LevelFatal = slog.Level(12)
+)
+
+var levelNames = map[slog.Leveler]string{
+	LevelTrace: "TRACE",
+	LevelFatal: "FATAL",
+}
+
+var defaultLoggerOptions = &slog.HandlerOptions{
+	Level: Level,
+	ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+		if a.Key == slog.LevelKey {
+			level := a.Value.Any().(slog.Level)
+			levelLabel, exists := levelNames[level]
+			if !exists {
+				levelLabel = level.String()
+			}
+
+			a.Value = slog.StringValue(levelLabel)
+		}
+
+		return a
+	},
+}
+
+var Level = &slog.LevelVar{}
+
+var Logger = slog.New(slog.NewTextHandler(os.Stdout, defaultLoggerOptions))
 
 // Initialise default logger.
 func init() {
-	Logger = log.New(os.Stdout, "", log.LstdFlags)
-}
-
-func Trace(v ...interface{}) {
-	fa := "[TRACE] "
-	v = append([]interface{}{fa}, v...)
-	Logger.Print(v...)
-}
-
-func Tracef(format string, v ...interface{}) {
-	Trace(fmt.Sprintf(format, v...))
-}
-
-func Debug(v ...interface{}) {
-	fa := "[DEBUG] "
-	v = append([]interface{}{fa}, v...)
-	Logger.Print(v...)
-}
-
-func Debugf(format string, v ...interface{}) {
-	Debug(fmt.Sprintf(format, v...))
-}
-
-func Warn(v ...interface{}) {
-	fa := "[WARN] "
-	v = append([]interface{}{fa}, v...)
-	Logger.Print(v...)
-}
-
-func Warnf(format string, v ...interface{}) {
-	Warn(fmt.Sprintf(format, v...))
-}
-
-func Info(v ...interface{}) {
-	fa := "[INFO] "
-	v = append([]interface{}{fa}, v...)
-	Logger.Print(v...)
-}
-
-func Infof(format string, v ...interface{}) {
-	Info(fmt.Sprintf(format, v...))
-}
-
-func Error(v ...interface{}) {
-	fa := "[ERROR] "
-	v = append([]interface{}{fa}, v...)
-	Logger.Print(v...)
-}
-
-func Errorf(format string, v ...interface{}) {
-	Error(fmt.Sprintf(format, v...))
-}
-
-func Fatal(v ...interface{}) {
-	fa := "[FATAL] "
-	v = append([]interface{}{fa}, v...)
-	Logger.Print(v...)
-}
-
-func Fatalf(format string, v ...interface{}) {
-	Fatal(fmt.Sprintf(format, v...))
+	slog.SetDefault(Logger)
 }

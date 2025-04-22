@@ -3,6 +3,8 @@ package notifications
 import (
 	"context"
 	"github.com/bwmarrin/discordgo"
+	"log/slog"
+	"os"
 )
 
 type Notifications struct {
@@ -12,10 +14,17 @@ type Notifications struct {
 	ctx *context.Context
 }
 
+// logger stores the module's logger instance.
+var logger = slog.New(slog.NewTextHandler(os.Stdout, nil))
+
 func New(discord *discordgo.Session) (mod *Notifications, err error) {
 	return &Notifications{
 		discord: discord,
 	}, nil
+}
+
+func (mod *Notifications) SetLogger(log *slog.Logger) {
+	logger = log
 }
 
 func (mod *Notifications) DiscordCommands() ([]*discordgo.ApplicationCommand, error) {

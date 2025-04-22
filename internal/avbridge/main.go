@@ -4,26 +4,28 @@ import (
 	"context"
 	"github.com/bwmarrin/discordgo"
 	"github.com/thebiggame/bigbot/internal/avcomms"
+	"log/slog"
 	"sync"
 )
 
 type AVBridge struct {
 	discord *discordgo.Session
 
+	// The logger for this module.
+	logger *slog.Logger
+
 	// The context given to us by the main bot.
 	ctx *context.Context
 }
 
 func New(discord *discordgo.Session) (bridge *AVBridge, err error) {
-	// InitOld AV session handlers in avcomms
-	// Unbind this tight integration perhaps?
-	err = avcomms.InitOld()
-	if err != nil {
-		return nil, err
-	}
 	return &AVBridge{
 		discord: discord,
 	}, nil
+}
+
+func (mod *AVBridge) SetLogger(logger *slog.Logger) {
+	mod.logger = logger
 }
 
 func (mod *AVBridge) DiscordCommands() ([]*discordgo.ApplicationCommand, error) {
@@ -32,8 +34,7 @@ func (mod *AVBridge) DiscordCommands() ([]*discordgo.ApplicationCommand, error) 
 
 func (mod *AVBridge) Start(ctx context.Context) (err error) {
 	mod.ctx = &ctx
-	// TODO This feels like the wrong place to initialise avcomms.
-	// goobsDaemon needs the close channel to be ready.
+	// FIXME Deprecated; to be moved to bridge-lan.
 	goobsCtx, goobsCancel := context.WithCancel(ctx)
 	var wg sync.WaitGroup
 	go func() {

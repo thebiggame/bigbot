@@ -6,7 +6,7 @@ import (
 	bridge_wan "github.com/thebiggame/bigbot/internal/bridge-wan"
 	"github.com/thebiggame/bigbot/internal/config"
 	"github.com/thebiggame/bigbot/internal/helpers"
-	"github.com/thebiggame/bigbot/internal/log"
+	"log/slog"
 	"strings"
 )
 
@@ -186,7 +186,7 @@ func (mod *Notifications) DiscordHandleInteraction(s *discordgo.Session, i *disc
 			err := bridge_wan.EventBridge.BrReplicantSet(config.RuntimeConfig.AV.NodeCG.BundleName, ngtbg.NodeCGReplicantEventInfoBody, name)
 			if err != nil {
 				// NodeCG not available for some reason.
-				log.Infof("NodeCG not available: %s", err)
+				logger.Info("NodeCG not available", slog.Any("error", err))
 			} else {
 				// Then set it to active (plays the announcement chime & displays it)
 				err = bridge_wan.EventBridge.BrReplicantSet(config.RuntimeConfig.AV.NodeCG.BundleName, ngtbg.NodeCGReplicantEventInfoActive, true)

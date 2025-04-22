@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/bwmarrin/discordgo"
 	"github.com/thebiggame/bigbot/internal/config"
-	"github.com/thebiggame/bigbot/internal/log"
 	"strings"
 )
 
@@ -14,7 +13,7 @@ func sendNotificationToDiscord(s *discordgo.Session, message string) (err error)
 	// Get Channel ID from config
 	var channelID = config.RuntimeConfig.Discord.Announcements.ChannelID
 	if config.RuntimeConfig.Discord.Announcements.ChannelID == "" {
-		log.Info("No Notification Channel ID set, not sending notification to Discord")
+		logger.Info("No Notification Channel ID set, not sending notification to Discord")
 		return
 	}
 

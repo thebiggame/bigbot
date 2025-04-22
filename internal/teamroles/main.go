@@ -6,7 +6,8 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/thebiggame/bigbot/internal/config"
 	"github.com/thebiggame/bigbot/internal/helpers"
-	"github.com/thebiggame/bigbot/internal/log"
+	"log/slog"
+	"os"
 	"regexp"
 	"strings"
 )
@@ -14,6 +15,9 @@ import (
 const (
 	teamRolePrefix = "Team:"
 )
+
+// logger stores the module's logger instance.
+var logger = slog.New(slog.NewTextHandler(os.Stdout, nil))
 
 type TeamRoles struct {
 	discord *discordgo.Session
@@ -72,6 +76,10 @@ func New(discord *discordgo.Session) *TeamRoles {
 	return &TeamRoles{
 		discord: discord,
 	}
+}
+
+func (mod *TeamRoles) SetLogger(log *slog.Logger) {
+	logger = log
 }
 
 func (mod *TeamRoles) DiscordCommands() ([]*discordgo.ApplicationCommand, error) {
@@ -279,12 +287,12 @@ func createOrReturnRole(s *discordgo.Session, guild string, rname string) (v *di
 		for _, v := range roles {
 			// role names get normalized to lower case during the lookup only
 			if strings.ToLower(v.Name) == strings.ToLower(rname) {
-				log.Debugf("Tying %s to existing team role %s", rname, v.Name)
+				logger.Debug("Tying to existing team role", slog.String("requested_role", rname), slog.String("existing_role", v.Name))
 				return v, true, nil
 			}
 		}
 		// couldn't find the role in our list, create it
-		log.Debugf("Creating new team role %s", rname)
+		logger.Debug("Creating new team role", slog.String("role", rname))
 		var rColour = 8290694
 		var rHoist = true
 		var rMentionable = true

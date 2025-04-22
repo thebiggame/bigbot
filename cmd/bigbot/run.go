@@ -2,13 +2,10 @@ package main
 
 import (
 	"errors"
-	"fmt"
-	"github.com/andreykaipov/goobs/api"
-	"github.com/hashicorp/logutils"
 	"github.com/thebiggame/bigbot/internal/bot"
 	"github.com/thebiggame/bigbot/internal/config"
 	log2 "github.com/thebiggame/bigbot/internal/log"
-	"log"
+	"log/slog"
 	"os"
 	"strings"
 )
@@ -28,23 +25,19 @@ func (cmd *RunCmd) Run(globals *Globals) error {
 	}
 	// Bind config to global app config struct
 	config.RuntimeConfig = cmd.Config
+
 	// Configure logging
-	logFlags := log.Ltime
+	var logLevel slog.Level
 	logLevelNormalised := strings.ToUpper(globals.LogLevel)
 	if logLevelNormalised == "TRACE" {
-		logFlags |= log.Llongfile
+		log2.Level.Set(log2.LevelTrace)
 	}
-	log2.Logger = log.New(
-		&logutils.LevelFilter{
-			Levels:   []logutils.LogLevel{"TRACE", "DEBUG", "INFO", "WARN", "ERROR", "FATAL"},
-			MinLevel: logutils.LogLevel(logLevelNormalised),
-			Writer: api.LoggerWithWrite(func(p []byte) (int, error) {
-				return os.Stderr.WriteString(fmt.Sprintf("\033[36m%s\033[0m", p))
-			}),
-		},
-		"",
-		logFlags,
-	)
+
+	log2.Logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+		Level: logLevel,
+	},
+	))
+
 	botInstance, err := bot.New()
 	if err != nil {
 		return err

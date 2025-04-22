@@ -5,7 +5,16 @@ package avcomms
 import (
 	"github.com/thebiggame/bigbot/internal/config"
 	"github.com/thebiggame/bigbot/pkg/nodecg"
+	"log/slog"
+	"os"
 )
+
+// logger stores the module's logger instance.
+var logger = slog.New(slog.NewTextHandler(os.Stdout, nil))
+
+func SetLogger(log *slog.Logger) {
+	logger = log
+}
 
 func InitOld() (err error) {
 	if isInitialised {

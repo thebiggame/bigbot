@@ -5,7 +5,6 @@ import (
 	"github.com/thebiggame/bigbot/internal/avbridge/ngtbg"
 	bridge_wan "github.com/thebiggame/bigbot/internal/bridge-wan"
 	"github.com/thebiggame/bigbot/internal/config"
-	"github.com/thebiggame/bigbot/internal/log"
 	"time"
 )
 
@@ -14,7 +13,7 @@ func (mod *ShoutProxy) DiscordHandleMessage(s *discordgo.Session, m *discordgo.M
 	// Ensure the shout happened in the expected target guild and channel.
 	var channelID = config.RuntimeConfig.Discord.Shoutbox.ChannelID
 	if channelID == "" {
-		log.Debug("No Shoutbox Channel ID set, not dispatching")
+		logger.Debug("No Shoutbox Channel ID set, not dispatching")
 		return
 	}
 

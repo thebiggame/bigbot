@@ -9,6 +9,7 @@ import (
 	protodef "github.com/thebiggame/bigbot/proto"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/proto"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
@@ -30,6 +31,10 @@ type Config struct {
 		} `prefix:"nodecg." embed:"" envprefix:"NODECG_"`
 	} `prefix:"av." embed:"" envprefix:"AV_"`
 }
+
+// logger stores the module's logger instance.
+var logger = slog.New(slog.NewTextHandler(os.Stdout, nil)).With(slog.String("module", "bridge_lan"))
+
 type BridgeLAN struct {
 	// The context given to us by the main bot.
 	ctx *context.Context
@@ -49,6 +54,10 @@ func New(config *Config) (bridge *BridgeLAN, err error) {
 		config: *config,
 	}
 	return bridge, nil
+}
+
+func (mod *BridgeLAN) SetLogger(log *slog.Logger) {
+	logger = log
 }
 
 func (mod *BridgeLAN) Run() (err error) {
@@ -75,21 +84,21 @@ func (bridge *BridgeLAN) doAuth() error {
 	}
 	msg, err := proto.Marshal(event)
 	if err != nil {
-		log.Errorf("marshalling error: %s", err)
+		logger.Error("marshalling error", slog.Any("error", err))
 	}
 	err = bridge.conn.WriteMessage(websocket.BinaryMessage, msg)
 	if err != nil {
-		log.Errorf("write error: %s", err)
+		logger.Error("write error", slog.Any("error", err))
 	}
 	return nil
 }
 
 func (bridge *BridgeLAN) Start(ctx context.Context) (err error) {
 	bridge.ctx = &ctx
-	log.Infof("Connecting to BIGbot at %s...", bridge.config.WsAddress)
+	logger.Info("Connecting to BIGbot", slog.String("address", bridge.config.WsAddress))
 	bridge.conn, _, err = websocket.DefaultDialer.Dial(bridge.config.WsAddress, nil)
 	if err != nil {
-		log.Fatal("dial:", err)
+		logger.Log(ctx, log.LevelFatal, "problem dialling BIGbot", slog.Any("error", err))
 		return err
 	}
 	defer bridge.conn.Close()
@@ -98,10 +107,11 @@ func (bridge *BridgeLAN) Start(ctx context.Context) (err error) {
 
 	err = bridge.doAuth()
 	if err != nil {
-		log.Fatal("auth:", err)
+		logger.Log(ctx, log.LevelFatal, "problem authenticating with BIGbot", slog.Any("error", err))
 		return err
 	}
 	g.Go(func() error {
+		avcomms.SetLogger(logger.With("module", "avcomms"))
 		err := avcomms.Init(bridge.config.AV.NodeCG.Hostname, bridge.config.AV.NodeCG.AuthenticationKey)
 		if err != nil {
 			return err
@@ -118,34 +128,35 @@ func (bridge *BridgeLAN) Start(ctx context.Context) (err error) {
 			default:
 				_, message, err := bridge.conn.ReadMessage()
 				if err != nil {
-					log.Error("read:", err)
+					logger.Error("problem reading from bridge connection", slog.Any("error", err))
 					return err
 				}
 				event := &protodef.ServerEvent{}
 				err = proto.Unmarshal(message, event)
 				if err != nil {
-					log.Errorf("unmarshaling error: %s", err)
+					logger.Error("unmarshaling error", slog.Any("error", err))
 				}
-				log.Tracef("unmarshalled: %s", event)
+				logger.Log(ctx, log.LevelTrace, "unmarshalled", slog.Any("data", event))
 
 				switch ev := event.Event.(type) {
 				case *protodef.ServerEvent_Welcome:
 					{
-						log.Infof("Welcome from BIGbot version %s", ev.Welcome.GetVersion())
+						logger.Info("Connected to BIGbot.", slog.String("remote_version", ev.Welcome.GetVersion()))
 						bridge.connected = true
 					}
 				case *protodef.ServerEvent_Ping:
 					{
-						log.Info("ping: %s", ev)
+						logger.Info("ping", slog.Any("data", event))
 						// handlePing(clientEvent.GetPing(), c)
 					}
 				case *protodef.ServerEvent_NodecgMessage:
 					{
-						log.Debug("NodeCGMessage received: %s", ev)
+						logger.Debug("NodeCGMessage received")
+
 						err := bridge.handleNodeCGMessageSend(ev)
 						var sCode int32
 						if err != nil {
-							log.Errorf("handleNodeCGMessage error: %s", err)
+							logger.Error("handleNodeCGMessage error", slog.Any("error", err))
 							sCode = 500
 						}
 						var errData string
@@ -164,20 +175,20 @@ func (bridge *BridgeLAN) Start(ctx context.Context) (err error) {
 						}
 						msg, err := proto.Marshal(response)
 						if err != nil {
-							log.Errorf("marshalling error: %s", err)
+							logger.Error("marshalling error", slog.Any("error", err))
 						}
 						err = bridge.conn.WriteMessage(websocket.BinaryMessage, msg)
 						if err != nil {
-							log.Errorf("write error: %s", err)
+							logger.Error("write error", slog.Any("error", err))
 						}
 					}
 				case *protodef.ServerEvent_NodecgReplicantSet:
 					{
-						log.Debug("NodeCGReplicantSet received: %s", ev)
+						logger.Debug("NodeCGReplicantSet received")
 						err := bridge.handleNodeCGReplicantSet(ev)
 						var sCode int32
 						if err != nil {
-							log.Errorf("handleNodeCGReplicantSet error: %s", err)
+							logger.Error("handleNodeCGReplicantSet error", slog.Any("error", err))
 							sCode = 500
 						}
 						var errData string
@@ -196,20 +207,20 @@ func (bridge *BridgeLAN) Start(ctx context.Context) (err error) {
 						}
 						msg, err := proto.Marshal(response)
 						if err != nil {
-							log.Errorf("marshalling error: %s", err)
+							logger.Error("marshalling error", slog.Any("error", err))
 						}
 						err = bridge.conn.WriteMessage(websocket.BinaryMessage, msg)
 						if err != nil {
-							log.Errorf("write error: %s", err)
+							logger.Error("write error", slog.Any("error", err))
 						}
 					}
 				case *protodef.ServerEvent_NodecgReplicantGet:
 					{
-						log.Debug("NodeCGReplicantGet received: %s", ev)
+						logger.Debug("NodeCGReplicantGet received")
 						data, err := bridge.handleNodeCGReplicantGet(ev)
 						var sCode int32
 						if err != nil {
-							log.Errorf("handleNodeCGReplicantGet error: %s", err)
+							logger.Error("handleNodeCGReplicantGet error", slog.Any("error", err))
 							sCode = 500
 						}
 						var errData string
@@ -233,11 +244,11 @@ func (bridge *BridgeLAN) Start(ctx context.Context) (err error) {
 						}
 						msg, err := proto.Marshal(response)
 						if err != nil {
-							log.Errorf("marshalling error: %s", err)
+							logger.Error("marshalling error", slog.Any("error", err))
 						}
 						err = bridge.conn.WriteMessage(websocket.BinaryMessage, msg)
 						if err != nil {
-							log.Errorf("write error: %s", err)
+							logger.Error("write error", slog.Any("error", err))
 						}
 					}
 				}
@@ -255,7 +266,7 @@ func (bridge *BridgeLAN) Start(ctx context.Context) (err error) {
 				// waiting (with timeout) for the server to close the connection.
 				err = bridge.conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 				if err != nil {
-					log.Error("write close:", err)
+					logger.Error("write close error", slog.Any("error", err))
 					return err
 				}
 				select {
@@ -268,9 +279,9 @@ func (bridge *BridgeLAN) Start(ctx context.Context) (err error) {
 
 	// Closedown the context.
 	if closeErr := g.Wait(); closeErr == nil || errors.Is(closeErr, context.Canceled) || websocket.IsCloseError(closeErr, websocket.CloseNormalClosure) {
-		log.Info("Bridge stopped gracefully.")
+		logger.Info("Bridge stopped gracefully.")
 	} else {
-		log.Warn("Error during shutdown: %v", closeErr)
+		logger.Warn("Error during shutdown", slog.Any("error", err))
 	}
 	return
 }

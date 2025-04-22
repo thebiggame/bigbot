@@ -1,11 +1,14 @@
 package bridge_wan
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"github.com/gorilla/websocket"
 	"github.com/thebiggame/bigbot/internal/log"
 	protodef "github.com/thebiggame/bigbot/proto"
 	"google.golang.org/protobuf/proto"
+	"log/slog"
 	"net"
 	"net/http"
 )
@@ -22,11 +25,11 @@ func handlePing(m *protodef.Ping, c *websocket.Conn) {
 	response := new(protodef.Ping)
 	msg, err := proto.Marshal(response)
 	if err != nil {
-		log.Errorf("marshalling error: %s", err)
+		logger.Error("marshalling error", slog.Any("error", err))
 	}
 	err = c.WriteMessage(websocket.BinaryMessage, msg)
 	if err != nil {
-		log.Errorf("write error: %s", err)
+		logger.Error("write error", slog.Any("error", err))
 	}
 }
 
@@ -40,11 +43,11 @@ func writeWelcome(c *websocket.Conn) {
 	}
 	msg, err := proto.Marshal(event)
 	if err != nil {
-		log.Errorf("marshalling error: %s", err)
+		logger.Error("marshalling error", slog.Any("error", err))
 	}
 	err = c.WriteMessage(websocket.BinaryMessage, msg)
 	if err != nil {
-		log.Errorf("write error: %s", err)
+		logger.Error("write error", slog.Any("error", err))
 	}
 }
 
@@ -58,11 +61,11 @@ func (bridge *BridgeWAN) handleAuthenticate(m *protodef.Authenticate, c *websock
 	if bridge.wsConn != nil {
 		err = bridge.wsConn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 		if err != nil && !errors.Is(err, net.ErrClosed) {
-			log.Error("write close:", err)
+			logger.Error("write close", slog.Any("error", err))
 		}
 	}
 
-	log.Infof("BIGbridge connected from %s", c.RemoteAddr())
+	logger.Info("BIGbridge connected", slog.String("address", c.RemoteAddr().String()))
 
 	// Set this connection as the valid connection.
 	bridge.wsConn = c
@@ -80,24 +83,24 @@ func (bridge *BridgeWAN) EventAvailable() bool {
 func (bridge *BridgeWAN) wsHandle(w http.ResponseWriter, r *http.Request) {
 	c, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Debug("upgrade:", err)
+		logger.Warn("upgrade", slog.Any("error", err))
 		return
 	}
 	defer c.Close()
 	for {
 		_, message, err := c.ReadMessage()
 		if err != nil {
-			log.Debug("read:", err)
+			logger.Warn("failed to read message from wire", slog.Any("error", err))
 			break
 		}
-		log.Tracef("received: %s", message)
+		logger.Log(context.Background(), log.LevelTrace, "received: %s", message)
 		clientEvent := &protodef.ClientEvent{}
 		err = proto.Unmarshal(message, clientEvent)
 		if err != nil {
-			log.Errorf("unmarshaling error: %s", err)
+			logger.Error("unmarshaling error", slog.Any("error", err))
 			continue
 		}
-		log.Tracef("unmarshalled: %s", clientEvent)
+		logger.Log(context.Background(), log.LevelTrace, fmt.Sprintf("unmarshalled: %s", clientEvent))
 
 		switch event := clientEvent.Event.(type) {
 		case *protodef.ClientEvent_Ping:
@@ -108,7 +111,7 @@ func (bridge *BridgeWAN) wsHandle(w http.ResponseWriter, r *http.Request) {
 			{
 				err := bridge.handleAuthenticate(event.Authenticate, c)
 				if err != nil {
-					log.Errorf("authentication error: %s", err)
+					logger.Error("authentication error", slog.Any("error", err))
 					return
 				}
 			}
@@ -120,7 +123,7 @@ func (bridge *BridgeWAN) wsHandle(w http.ResponseWriter, r *http.Request) {
 				close(ch)
 				delete(bridge.wsResponseCh, event.RpcResponse.RequestId)
 			} else {
-				log.Warnf("No matching request for RPC response with ID %s", event.RpcResponse.RequestId)
+				logger.Warn("No matching request for RPC response", slog.String("request_id", event.RpcResponse.RequestId))
 			}
 			bridge.wsResponseMtx.Unlock()
 		}
@@ -130,5 +133,5 @@ func (bridge *BridgeWAN) wsHandle(w http.ResponseWriter, r *http.Request) {
 		}
 
 	}
-	log.Debug("Ended a client session.")
+	logger.Info("Ended client session", slog.String("address", c.RemoteAddr().String()))
 }

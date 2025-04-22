@@ -3,6 +3,8 @@ package shoutproxy
 import (
 	"context"
 	"github.com/bwmarrin/discordgo"
+	"log/slog"
+	"os"
 )
 
 type ShoutProxy struct {
@@ -12,10 +14,17 @@ type ShoutProxy struct {
 	ctx *context.Context
 }
 
+// logger stores the module's logger instance.
+var logger = slog.New(slog.NewTextHandler(os.Stdout, nil))
+
 func New(discord *discordgo.Session) (mod *ShoutProxy, err error) {
 	return &ShoutProxy{
 		discord: discord,
 	}, nil
+}
+
+func (mod *ShoutProxy) SetLogger(log *slog.Logger) {
+	logger = log
 }
 
 func (mod *ShoutProxy) DiscordCommands() ([]*discordgo.ApplicationCommand, error) {

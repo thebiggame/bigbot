@@ -6,6 +6,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/thebiggame/bigbot/internal/config"
 	"github.com/thebiggame/bigbot/internal/log"
+	"log/slog"
 	"sync"
 	"time"
 )
@@ -28,14 +29,14 @@ func goobsConnect() (err error) {
 
 		var err error
 		// goobs.WithLogger(config.Logger) (need a secondary logger to not pollute everything)
-		OBS, err = goobs.New(config.RuntimeConfig.AV.OBS.Hostname, goobs.WithPassword(config.RuntimeConfig.AV.OBS.Password), goobs.WithLogger(log.Logger))
+		OBS, err = goobs.New(config.RuntimeConfig.AV.OBS.Hostname, goobs.WithPassword(config.RuntimeConfig.AV.OBS.Password), goobs.WithLogger(slog.NewLogLogger(log.Logger.Handler(), log.LevelTrace)))
 		// Not deferred as we need this back immediately.
 		OBSMtx.Unlock()
 		if err != nil {
 			return err
 		}
 		if GoobsIsConnected() {
-			log.Info("OBS connected.")
+			logger.Info("OBS connected.")
 		}
 	}
 	return nil
@@ -72,7 +73,7 @@ func GoobsIsConnected() bool {
 func OBSDaemon(ctx context.Context) {
 	err := goobsConnect()
 	if err != nil {
-		log.Errorf("Error connecting to OBS: %s", err)
+		logger.Error("Error connecting to OBS", slog.Any("error", err))
 	}
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
@@ -80,21 +81,21 @@ func OBSDaemon(ctx context.Context) {
 		select {
 		case <-ticker.C:
 			if !GoobsIsConnected() {
-				log.Infof("OBS disconnected, attempting to reconnect...")
+				logger.Info("OBS disconnected, attempting to reconnect")
 				err = goobsConnect()
 				if err != nil {
-					log.Errorf("Failed to reconnect: %v", err)
+					logger.Error("Failed to reconnect", slog.Any("error", err))
 				} else {
-					log.Infof("Reconnected to OBS successfully")
+					logger.Info("Reconnected to OBS successfully")
 				}
 			}
 		case <-ctx.Done():
 			if OBS != nil {
 				err := goobsDisconnect()
 				if err != nil {
-					log.Errorf("Error during disconnect: %v", err)
+					logger.Error("Error during disconnect", slog.Any("error", err))
 				}
-				log.Infof("OBS disconnected gracefully.")
+				logger.Error("OBS disconnected gracefully.")
 			}
 			return
 		}

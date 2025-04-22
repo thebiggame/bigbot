@@ -3,10 +3,11 @@ package bridge_wan
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/gorilla/websocket"
 	"github.com/thebiggame/bigbot/internal/config"
-	"github.com/thebiggame/bigbot/internal/log"
 	protodef "github.com/thebiggame/bigbot/proto"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -18,7 +19,6 @@ import (
 type BridgeWAN struct {
 	// The context given to us by the main bot.
 	ctx *context.Context
-
 	// The HTTP server.
 	httpServer *http.Server
 
@@ -31,6 +31,9 @@ type BridgeWAN struct {
 	wsResponseCh  map[string]chan *protodef.RPCResponse
 	wsResponseMtx sync.Mutex
 }
+
+// logger stores the module's logger instance.
+var logger = slog.New(slog.NewTextHandler(os.Stdout, nil))
 
 var EventBridge *BridgeWAN
 
@@ -56,6 +59,10 @@ func New() (bridge *BridgeWAN, err error) {
 	return bridge, nil
 }
 
+func (mod *BridgeWAN) SetLogger(log *slog.Logger) {
+	logger = log
+}
+
 func (mod *BridgeWAN) Run() (err error) {
 	// Create app context (this is passed to modules).
 	// The signal.NotifyContext is a special context that gets torn down when an interrupt / SIGTERM is received.
@@ -79,9 +86,9 @@ func (mod *BridgeWAN) Start(ctx context.Context) (err error) {
 
 	http.HandleFunc("/ws", mod.wsHandle)
 	go func() {
-		log.Infof("BIGbridge SERVER listening at %v", mod.httpServer.Addr)
+		logger.Info(fmt.Sprintf("BIGbridge SERVER listening at %v", mod.httpServer.Addr))
 		if err := mod.httpServer.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
-			log.Errorf("error with HTTP server: %v", err)
+			logger.Error("error with HTTP server", slog.Any("error", err))
 		}
 	}()
 
@@ -91,7 +98,7 @@ func (mod *BridgeWAN) Start(ctx context.Context) (err error) {
 		case <-ctx.Done():
 			// Do clean shutdown.
 			if err := mod.httpServer.Shutdown(context.Background()); err != nil {
-				log.Errorf("error shutting down http server: %v", err)
+				logger.Error("error shutting down http server", slog.Any("error", err))
 			}
 			return ctx.Err()
 		}
