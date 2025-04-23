@@ -7,12 +7,12 @@ import (
 	"strings"
 )
 
-type RunCmd struct {
+type BridgeCmd struct {
 	// Embed main app config (will be set during run)
 	Config config.BridgeConfig `embed:"" envprefix:"BIGBRIDGE_"`
 }
 
-func (cmd *RunCmd) Run(globals *Globals) error {
+func (cmd *BridgeCmd) Run(globals *Globals) error {
 	// Configure logging
 	logLevelNormalised := strings.ToUpper(globals.LogLevel)
 	if logLevelNormalised == "TRACE" {

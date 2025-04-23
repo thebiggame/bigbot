@@ -45,17 +45,18 @@ func New() (*BigBot, error) {
 		return nil, fmt.Errorf("error creating Discord session: %w", err)
 	}
 
-	// create primary bot object and return it
+	// create primary bot object
 	bot := &BigBot{
 		DiscordSession: DiscordSession,
 		logger:         log.Logger.With(slog.String("module", "main")),
 	}
+	// load modules
+	bot.LoadModules()
 	return bot, nil
 }
 
-// WithWANModules loads the modules that should usually run in a cloud / WAN environment.
-// These modules should not normally need network access to a LAN event.
-func (b *BigBot) WithWANModules() *BigBot {
+// LoadModules loads all available modules into BIGbot's structs.
+func (b *BigBot) LoadModules() *BigBot {
 	// teamRoles
 	module := teamroles.New(b.DiscordSession)
 	b.modules = append(b.modules, module)
@@ -67,12 +68,7 @@ func (b *BigBot) WithWANModules() *BigBot {
 	}
 	modBridge.SetLogger(b.logger.With(slog.String("module", "bridge_wan")))
 	b.modules = append(b.modules, modBridge)
-	return b
-}
 
-// WithLANModules loads the modules that are relevant to the bot running in a LAN environment,
-// e.g. those that require intranet access to function properly.
-func (b *BigBot) WithLANModules() *BigBot {
 	// avbridge
 	modAVBridge, err := avbridge.New(b.DiscordSession)
 	if err != nil {

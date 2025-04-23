@@ -13,7 +13,8 @@ type Globals struct {
 type CLI struct {
 	Globals `envprefix:"BIGBOT_"`
 
-	Run RunCmd `cmd:"" help:"Run BIGbot."`
+	Run    RunCmd    `cmd:"run" help:"Run BIGbot (."`
+	Bridge BridgeCmd `cmd:"bridge" help:"Run BIGbridge (the event client)."`
 }
 
 func main() {
