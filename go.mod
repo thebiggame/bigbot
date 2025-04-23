@@ -9,9 +9,7 @@ require (
 	github.com/alecthomas/kong-yaml v0.2.0
 	github.com/andreykaipov/goobs v1.5.3
 	github.com/bwmarrin/discordgo v0.28.1
-	github.com/golang/protobuf v1.5.0
 	github.com/gorilla/websocket v1.5.3
-	github.com/hashicorp/logutils v1.0.0
 	golang.org/x/sync v0.11.0
 	google.golang.org/protobuf v1.33.0
 )
@@ -20,6 +18,7 @@ require (
 	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/google/go-cmp v0.5.8 // indirect
+	github.com/hashicorp/logutils v1.0.0 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/mmcloughlin/profile v0.1.1 // indirect

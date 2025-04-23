@@ -3,6 +3,7 @@ package bridge_wan
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/gorilla/websocket"
 	"github.com/thebiggame/bigbot/internal/log"
 	protodef "github.com/thebiggame/bigbot/proto"
@@ -50,6 +51,32 @@ func writeWelcome(c *websocket.Conn) {
 	}
 }
 
+// terminateConnection writes the connection termination event to the pipe, then closes the connection.
+func terminateConnection[num int32 | int](c *websocket.Conn, code num, message string) (err error) {
+	event := &protodef.ServerEvent{
+		Event: &protodef.ServerEvent_ConnTermination{
+			ConnTermination: &protodef.ConnClose{
+				StatusCode: int32(code),
+				Message:    message,
+			},
+		},
+	}
+	msg, err := proto.Marshal(event)
+	if err != nil {
+		return fmt.Errorf("marshalling: %w", err)
+	}
+	err = c.WriteMessage(websocket.BinaryMessage, msg)
+	if err != nil && !errors.Is(err, net.ErrClosed) {
+		return fmt.Errorf("connection write: %w", err)
+	}
+	// Yes, this potentially writes to a connection we already know is closed.
+	err = c.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+	if err != nil && !errors.Is(err, net.ErrClosed) {
+		return fmt.Errorf("connection close: %w", err)
+	}
+	return nil
+}
+
 func (bridge *BridgeWAN) handleAuthenticate(m *protodef.Authenticate, c *websocket.Conn) (err error) {
 	key := m.GetKey()
 	if key != bridge.wsKey {
@@ -58,10 +85,11 @@ func (bridge *BridgeWAN) handleAuthenticate(m *protodef.Authenticate, c *websock
 	}
 	// Boot any existing connection.
 	if bridge.wsConn != nil {
-		err = bridge.wsConn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
-		if err != nil && !errors.Is(err, net.ErrClosed) {
-			logger.Error("write close", slog.Any("error", err))
+		err = terminateConnection(bridge.wsConn, 101, "superceding client connected")
+		if err != nil {
+			logger.Error("error closing existing connection", slog.Any("error", err))
 		}
+		// The bridge.wsConn will be overwritten, so there's no need to set it to nil.
 	}
 
 	logger.Info("BIGbridge connected", slog.String("address", c.RemoteAddr().String()))
@@ -89,7 +117,9 @@ func (bridge *BridgeWAN) wsHandle(w http.ResponseWriter, r *http.Request) {
 	for {
 		_, message, err := c.ReadMessage()
 		if err != nil {
-			logger.Warn("failed to read message from wire", slog.Any("error", err))
+			if !errors.Is(err, websocket.ErrCloseSent) && !websocket.IsCloseError(err, websocket.CloseNormalClosure) {
+				logger.Warn("failed to read message from wire", slog.Any("error", err))
+			}
 			break
 		}
 		logger.Log(context.Background(), log.LevelTrace, "received protobuf", slog.Any("payload", message))
@@ -118,6 +148,7 @@ func (bridge *BridgeWAN) wsHandle(w http.ResponseWriter, r *http.Request) {
 			// It's a response to a previous request.
 			bridge.wsResponseMtx.Lock()
 			if ch, ok := bridge.wsResponseCh[event.RpcResponse.RequestId]; ok {
+				logger.Log(context.Background(), log.LevelTrace, "handling response on websocket", slog.String("request_id", event.RpcResponse.RequestId), slog.Any("request", event.RpcResponse))
 				ch <- event.RpcResponse
 				close(ch)
 				delete(bridge.wsResponseCh, event.RpcResponse.RequestId)
@@ -133,4 +164,5 @@ func (bridge *BridgeWAN) wsHandle(w http.ResponseWriter, r *http.Request) {
 
 	}
 	logger.Info("Ended client session", slog.String("address", c.RemoteAddr().String()))
+	c = nil
 }

@@ -28,6 +28,7 @@ type ServerEvent struct {
 	//
 	//	*ServerEvent_Welcome
 	//	*ServerEvent_Ping
+	//	*ServerEvent_ConnTermination
 	//	*ServerEvent_NodecgReplicantSet
 	//	*ServerEvent_NodecgReplicantGet
 	//	*ServerEvent_NodecgMessage
@@ -99,6 +100,15 @@ func (x *ServerEvent) GetPing() *Ping {
 	return nil
 }
 
+func (x *ServerEvent) GetConnTermination() *ConnClose {
+	if x != nil {
+		if x, ok := x.Event.(*ServerEvent_ConnTermination); ok {
+			return x.ConnTermination
+		}
+	}
+	return nil
+}
+
 func (x *ServerEvent) GetNodecgReplicantSet() *NodecgReplicantSet {
 	if x != nil {
 		if x, ok := x.Event.(*ServerEvent_NodecgReplicantSet); ok {
@@ -147,25 +157,31 @@ type ServerEvent_Ping struct {
 	Ping *Ping `protobuf:"bytes,3,opt,name=ping,proto3,oneof"`
 }
 
+type ServerEvent_ConnTermination struct {
+	ConnTermination *ConnClose `protobuf:"bytes,4,opt,name=conn_termination,json=connTermination,proto3,oneof"`
+}
+
 type ServerEvent_NodecgReplicantSet struct {
-	NodecgReplicantSet *NodecgReplicantSet `protobuf:"bytes,4,opt,name=nodecg_replicant_set,json=nodecgReplicantSet,proto3,oneof"`
+	NodecgReplicantSet *NodecgReplicantSet `protobuf:"bytes,11,opt,name=nodecg_replicant_set,json=nodecgReplicantSet,proto3,oneof"`
 }
 
 type ServerEvent_NodecgReplicantGet struct {
-	NodecgReplicantGet *NodecgReplicantGet `protobuf:"bytes,5,opt,name=nodecg_replicant_get,json=nodecgReplicantGet,proto3,oneof"`
+	NodecgReplicantGet *NodecgReplicantGet `protobuf:"bytes,12,opt,name=nodecg_replicant_get,json=nodecgReplicantGet,proto3,oneof"`
 }
 
 type ServerEvent_NodecgMessage struct {
-	NodecgMessage *NodecgMessageSend `protobuf:"bytes,6,opt,name=nodecg_message,json=nodecgMessage,proto3,oneof"`
+	NodecgMessage *NodecgMessageSend `protobuf:"bytes,13,opt,name=nodecg_message,json=nodecgMessage,proto3,oneof"`
 }
 
 type ServerEvent_ObsSceneTransition struct {
-	ObsSceneTransition *OBSSceneTransition `protobuf:"bytes,7,opt,name=obs_scene_transition,json=obsSceneTransition,proto3,oneof"`
+	ObsSceneTransition *OBSSceneTransition `protobuf:"bytes,14,opt,name=obs_scene_transition,json=obsSceneTransition,proto3,oneof"`
 }
 
 func (*ServerEvent_Welcome) isServerEvent_Event() {}
 
 func (*ServerEvent_Ping) isServerEvent_Event() {}
+
+func (*ServerEvent_ConnTermination) isServerEvent_Event() {}
 
 func (*ServerEvent_NodecgReplicantSet) isServerEvent_Event() {}
 
@@ -255,6 +271,58 @@ func (*Ping) Descriptor() ([]byte, []int) {
 	return file_bridge_proto_rawDescGZIP(), []int{2}
 }
 
+type ConnClose struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	StatusCode    int32                  `protobuf:"varint,1,opt,name=status_code,json=statusCode,proto3" json:"status_code,omitempty"`
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ConnClose) Reset() {
+	*x = ConnClose{}
+	mi := &file_bridge_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ConnClose) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ConnClose) ProtoMessage() {}
+
+func (x *ConnClose) ProtoReflect() protoreflect.Message {
+	mi := &file_bridge_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ConnClose.ProtoReflect.Descriptor instead.
+func (*ConnClose) Descriptor() ([]byte, []int) {
+	return file_bridge_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *ConnClose) GetStatusCode() int32 {
+	if x != nil {
+		return x.StatusCode
+	}
+	return 0
+}
+
+func (x *ConnClose) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
 type NodecgReplicantSet struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Namespace     string                 `protobuf:"bytes,1,opt,name=namespace,proto3" json:"namespace,omitempty"`
@@ -266,7 +334,7 @@ type NodecgReplicantSet struct {
 
 func (x *NodecgReplicantSet) Reset() {
 	*x = NodecgReplicantSet{}
-	mi := &file_bridge_proto_msgTypes[3]
+	mi := &file_bridge_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -278,7 +346,7 @@ func (x *NodecgReplicantSet) String() string {
 func (*NodecgReplicantSet) ProtoMessage() {}
 
 func (x *NodecgReplicantSet) ProtoReflect() protoreflect.Message {
-	mi := &file_bridge_proto_msgTypes[3]
+	mi := &file_bridge_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -291,7 +359,7 @@ func (x *NodecgReplicantSet) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NodecgReplicantSet.ProtoReflect.Descriptor instead.
 func (*NodecgReplicantSet) Descriptor() ([]byte, []int) {
-	return file_bridge_proto_rawDescGZIP(), []int{3}
+	return file_bridge_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *NodecgReplicantSet) GetNamespace() string {
@@ -325,7 +393,7 @@ type NodecgReplicantGet struct {
 
 func (x *NodecgReplicantGet) Reset() {
 	*x = NodecgReplicantGet{}
-	mi := &file_bridge_proto_msgTypes[4]
+	mi := &file_bridge_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -337,7 +405,7 @@ func (x *NodecgReplicantGet) String() string {
 func (*NodecgReplicantGet) ProtoMessage() {}
 
 func (x *NodecgReplicantGet) ProtoReflect() protoreflect.Message {
-	mi := &file_bridge_proto_msgTypes[4]
+	mi := &file_bridge_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -350,7 +418,7 @@ func (x *NodecgReplicantGet) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NodecgReplicantGet.ProtoReflect.Descriptor instead.
 func (*NodecgReplicantGet) Descriptor() ([]byte, []int) {
-	return file_bridge_proto_rawDescGZIP(), []int{4}
+	return file_bridge_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *NodecgReplicantGet) GetNamespace() string {
@@ -378,7 +446,7 @@ type NodecgMessageSend struct {
 
 func (x *NodecgMessageSend) Reset() {
 	*x = NodecgMessageSend{}
-	mi := &file_bridge_proto_msgTypes[5]
+	mi := &file_bridge_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -390,7 +458,7 @@ func (x *NodecgMessageSend) String() string {
 func (*NodecgMessageSend) ProtoMessage() {}
 
 func (x *NodecgMessageSend) ProtoReflect() protoreflect.Message {
-	mi := &file_bridge_proto_msgTypes[5]
+	mi := &file_bridge_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -403,7 +471,7 @@ func (x *NodecgMessageSend) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NodecgMessageSend.ProtoReflect.Descriptor instead.
 func (*NodecgMessageSend) Descriptor() ([]byte, []int) {
-	return file_bridge_proto_rawDescGZIP(), []int{5}
+	return file_bridge_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *NodecgMessageSend) GetNamespace() string {
@@ -438,7 +506,7 @@ type OBSSceneTransition struct {
 
 func (x *OBSSceneTransition) Reset() {
 	*x = OBSSceneTransition{}
-	mi := &file_bridge_proto_msgTypes[6]
+	mi := &file_bridge_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -450,7 +518,7 @@ func (x *OBSSceneTransition) String() string {
 func (*OBSSceneTransition) ProtoMessage() {}
 
 func (x *OBSSceneTransition) ProtoReflect() protoreflect.Message {
-	mi := &file_bridge_proto_msgTypes[6]
+	mi := &file_bridge_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -463,7 +531,7 @@ func (x *OBSSceneTransition) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OBSSceneTransition.ProtoReflect.Descriptor instead.
 func (*OBSSceneTransition) Descriptor() ([]byte, []int) {
-	return file_bridge_proto_rawDescGZIP(), []int{6}
+	return file_bridge_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *OBSSceneTransition) GetSceneTarget() string {
@@ -494,7 +562,7 @@ type ClientEvent struct {
 
 func (x *ClientEvent) Reset() {
 	*x = ClientEvent{}
-	mi := &file_bridge_proto_msgTypes[7]
+	mi := &file_bridge_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -506,7 +574,7 @@ func (x *ClientEvent) String() string {
 func (*ClientEvent) ProtoMessage() {}
 
 func (x *ClientEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_bridge_proto_msgTypes[7]
+	mi := &file_bridge_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -519,7 +587,7 @@ func (x *ClientEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClientEvent.ProtoReflect.Descriptor instead.
 func (*ClientEvent) Descriptor() ([]byte, []int) {
-	return file_bridge_proto_rawDescGZIP(), []int{7}
+	return file_bridge_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *ClientEvent) GetEvent() isClientEvent_Event {
@@ -587,7 +655,7 @@ type Authenticate struct {
 
 func (x *Authenticate) Reset() {
 	*x = Authenticate{}
-	mi := &file_bridge_proto_msgTypes[8]
+	mi := &file_bridge_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -599,7 +667,7 @@ func (x *Authenticate) String() string {
 func (*Authenticate) ProtoMessage() {}
 
 func (x *Authenticate) ProtoReflect() protoreflect.Message {
-	mi := &file_bridge_proto_msgTypes[8]
+	mi := &file_bridge_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -612,7 +680,7 @@ func (x *Authenticate) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Authenticate.ProtoReflect.Descriptor instead.
 func (*Authenticate) Descriptor() ([]byte, []int) {
-	return file_bridge_proto_rawDescGZIP(), []int{8}
+	return file_bridge_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *Authenticate) GetKey() string {
@@ -637,7 +705,7 @@ type RPCResponse struct {
 
 func (x *RPCResponse) Reset() {
 	*x = RPCResponse{}
-	mi := &file_bridge_proto_msgTypes[9]
+	mi := &file_bridge_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -649,7 +717,7 @@ func (x *RPCResponse) String() string {
 func (*RPCResponse) ProtoMessage() {}
 
 func (x *RPCResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_bridge_proto_msgTypes[9]
+	mi := &file_bridge_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -662,7 +730,7 @@ func (x *RPCResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RPCResponse.ProtoReflect.Descriptor instead.
 func (*RPCResponse) Descriptor() ([]byte, []int) {
-	return file_bridge_proto_rawDescGZIP(), []int{9}
+	return file_bridge_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *RPCResponse) GetRequestId() string {
@@ -721,7 +789,7 @@ type NodecgReplicantGetResponse struct {
 
 func (x *NodecgReplicantGetResponse) Reset() {
 	*x = NodecgReplicantGetResponse{}
-	mi := &file_bridge_proto_msgTypes[10]
+	mi := &file_bridge_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -733,7 +801,7 @@ func (x *NodecgReplicantGetResponse) String() string {
 func (*NodecgReplicantGetResponse) ProtoMessage() {}
 
 func (x *NodecgReplicantGetResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_bridge_proto_msgTypes[10]
+	mi := &file_bridge_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -746,7 +814,7 @@ func (x *NodecgReplicantGetResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NodecgReplicantGetResponse.ProtoReflect.Descriptor instead.
 func (*NodecgReplicantGetResponse) Descriptor() ([]byte, []int) {
-	return file_bridge_proto_rawDescGZIP(), []int{10}
+	return file_bridge_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *NodecgReplicantGetResponse) GetReplicant() []byte {
@@ -760,20 +828,26 @@ var File_bridge_proto protoreflect.FileDescriptor
 
 const file_bridge_proto_rawDesc = "" +
 	"\n" +
-	"\fbridge.proto\"\x90\x03\n" +
+	"\fbridge.proto\"\xc9\x03\n" +
 	"\vServerEvent\x12\x1d\n" +
 	"\n" +
 	"request_id\x18\x01 \x01(\tR\trequestId\x12$\n" +
 	"\awelcome\x18\x02 \x01(\v2\b.WelcomeH\x00R\awelcome\x12\x1b\n" +
-	"\x04ping\x18\x03 \x01(\v2\x05.PingH\x00R\x04ping\x12G\n" +
-	"\x14nodecg_replicant_set\x18\x04 \x01(\v2\x13.NodecgReplicantSetH\x00R\x12nodecgReplicantSet\x12G\n" +
-	"\x14nodecg_replicant_get\x18\x05 \x01(\v2\x13.NodecgReplicantGetH\x00R\x12nodecgReplicantGet\x12;\n" +
-	"\x0enodecg_message\x18\x06 \x01(\v2\x12.NodecgMessageSendH\x00R\rnodecgMessage\x12G\n" +
-	"\x14obs_scene_transition\x18\a \x01(\v2\x13.OBSSceneTransitionH\x00R\x12obsSceneTransitionB\a\n" +
+	"\x04ping\x18\x03 \x01(\v2\x05.PingH\x00R\x04ping\x127\n" +
+	"\x10conn_termination\x18\x04 \x01(\v2\n" +
+	".ConnCloseH\x00R\x0fconnTermination\x12G\n" +
+	"\x14nodecg_replicant_set\x18\v \x01(\v2\x13.NodecgReplicantSetH\x00R\x12nodecgReplicantSet\x12G\n" +
+	"\x14nodecg_replicant_get\x18\f \x01(\v2\x13.NodecgReplicantGetH\x00R\x12nodecgReplicantGet\x12;\n" +
+	"\x0enodecg_message\x18\r \x01(\v2\x12.NodecgMessageSendH\x00R\rnodecgMessage\x12G\n" +
+	"\x14obs_scene_transition\x18\x0e \x01(\v2\x13.OBSSceneTransitionH\x00R\x12obsSceneTransitionB\a\n" +
 	"\x05event\"#\n" +
 	"\aWelcome\x12\x18\n" +
 	"\aversion\x18\x01 \x01(\tR\aversion\"\x06\n" +
-	"\x04Ping\"d\n" +
+	"\x04Ping\"F\n" +
+	"\tConnClose\x12\x1f\n" +
+	"\vstatus_code\x18\x01 \x01(\x05R\n" +
+	"statusCode\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\"d\n" +
 	"\x12NodecgReplicantSet\x12\x1c\n" +
 	"\tnamespace\x18\x01 \x01(\tR\tnamespace\x12\x1c\n" +
 	"\treplicant\x18\x02 \x01(\tR\treplicant\x12\x12\n" +
@@ -820,36 +894,38 @@ func file_bridge_proto_rawDescGZIP() []byte {
 	return file_bridge_proto_rawDescData
 }
 
-var file_bridge_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_bridge_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
 var file_bridge_proto_goTypes = []any{
 	(*ServerEvent)(nil),                // 0: ServerEvent
 	(*Welcome)(nil),                    // 1: Welcome
 	(*Ping)(nil),                       // 2: Ping
-	(*NodecgReplicantSet)(nil),         // 3: NodecgReplicantSet
-	(*NodecgReplicantGet)(nil),         // 4: NodecgReplicantGet
-	(*NodecgMessageSend)(nil),          // 5: NodecgMessageSend
-	(*OBSSceneTransition)(nil),         // 6: OBSSceneTransition
-	(*ClientEvent)(nil),                // 7: ClientEvent
-	(*Authenticate)(nil),               // 8: Authenticate
-	(*RPCResponse)(nil),                // 9: RPCResponse
-	(*NodecgReplicantGetResponse)(nil), // 10: NodecgReplicantGetResponse
+	(*ConnClose)(nil),                  // 3: ConnClose
+	(*NodecgReplicantSet)(nil),         // 4: NodecgReplicantSet
+	(*NodecgReplicantGet)(nil),         // 5: NodecgReplicantGet
+	(*NodecgMessageSend)(nil),          // 6: NodecgMessageSend
+	(*OBSSceneTransition)(nil),         // 7: OBSSceneTransition
+	(*ClientEvent)(nil),                // 8: ClientEvent
+	(*Authenticate)(nil),               // 9: Authenticate
+	(*RPCResponse)(nil),                // 10: RPCResponse
+	(*NodecgReplicantGetResponse)(nil), // 11: NodecgReplicantGetResponse
 }
 var file_bridge_proto_depIdxs = []int32{
 	1,  // 0: ServerEvent.welcome:type_name -> Welcome
 	2,  // 1: ServerEvent.ping:type_name -> Ping
-	3,  // 2: ServerEvent.nodecg_replicant_set:type_name -> NodecgReplicantSet
-	4,  // 3: ServerEvent.nodecg_replicant_get:type_name -> NodecgReplicantGet
-	5,  // 4: ServerEvent.nodecg_message:type_name -> NodecgMessageSend
-	6,  // 5: ServerEvent.obs_scene_transition:type_name -> OBSSceneTransition
-	8,  // 6: ClientEvent.authenticate:type_name -> Authenticate
-	2,  // 7: ClientEvent.ping:type_name -> Ping
-	9,  // 8: ClientEvent.rpc_response:type_name -> RPCResponse
-	10, // 9: RPCResponse.ncg_replicant_get:type_name -> NodecgReplicantGetResponse
-	10, // [10:10] is the sub-list for method output_type
-	10, // [10:10] is the sub-list for method input_type
-	10, // [10:10] is the sub-list for extension type_name
-	10, // [10:10] is the sub-list for extension extendee
-	0,  // [0:10] is the sub-list for field type_name
+	3,  // 2: ServerEvent.conn_termination:type_name -> ConnClose
+	4,  // 3: ServerEvent.nodecg_replicant_set:type_name -> NodecgReplicantSet
+	5,  // 4: ServerEvent.nodecg_replicant_get:type_name -> NodecgReplicantGet
+	6,  // 5: ServerEvent.nodecg_message:type_name -> NodecgMessageSend
+	7,  // 6: ServerEvent.obs_scene_transition:type_name -> OBSSceneTransition
+	9,  // 7: ClientEvent.authenticate:type_name -> Authenticate
+	2,  // 8: ClientEvent.ping:type_name -> Ping
+	10, // 9: ClientEvent.rpc_response:type_name -> RPCResponse
+	11, // 10: RPCResponse.ncg_replicant_get:type_name -> NodecgReplicantGetResponse
+	11, // [11:11] is the sub-list for method output_type
+	11, // [11:11] is the sub-list for method input_type
+	11, // [11:11] is the sub-list for extension type_name
+	11, // [11:11] is the sub-list for extension extendee
+	0,  // [0:11] is the sub-list for field type_name
 }
 
 func init() { file_bridge_proto_init() }
@@ -860,17 +936,18 @@ func file_bridge_proto_init() {
 	file_bridge_proto_msgTypes[0].OneofWrappers = []any{
 		(*ServerEvent_Welcome)(nil),
 		(*ServerEvent_Ping)(nil),
+		(*ServerEvent_ConnTermination)(nil),
 		(*ServerEvent_NodecgReplicantSet)(nil),
 		(*ServerEvent_NodecgReplicantGet)(nil),
 		(*ServerEvent_NodecgMessage)(nil),
 		(*ServerEvent_ObsSceneTransition)(nil),
 	}
-	file_bridge_proto_msgTypes[7].OneofWrappers = []any{
+	file_bridge_proto_msgTypes[8].OneofWrappers = []any{
 		(*ClientEvent_Authenticate)(nil),
 		(*ClientEvent_Ping)(nil),
 		(*ClientEvent_RpcResponse)(nil),
 	}
-	file_bridge_proto_msgTypes[9].OneofWrappers = []any{
+	file_bridge_proto_msgTypes[10].OneofWrappers = []any{
 		(*RPCResponse_NcgReplicantGet)(nil),
 	}
 	type x struct{}
@@ -879,7 +956,7 @@ func file_bridge_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_bridge_proto_rawDesc), len(file_bridge_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   11,
+			NumMessages:   12,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

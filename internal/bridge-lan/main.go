@@ -136,6 +136,12 @@ func (bridge *BridgeLAN) Start(ctx context.Context) (err error) {
 						logger.Info("ping", slog.Any("data", event))
 						// handlePing(clientEvent.GetPing(), c)
 					}
+				case *protodef.ServerEvent_ConnTermination:
+					{
+						logger.Error("connection terminated by BIGbot", slog.String("reason", ev.ConnTermination.GetMessage()))
+						// Attempt graceful closure.
+						return bridge.conn.Close()
+					}
 				case *protodef.ServerEvent_NodecgMessage:
 					{
 						logger.Debug("NodeCGMessage received")

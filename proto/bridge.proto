@@ -7,10 +7,11 @@ message ServerEvent {
   oneof event {
     Welcome welcome = 2;
     Ping ping = 3;
-    NodecgReplicantSet nodecg_replicant_set = 4;
-    NodecgReplicantGet nodecg_replicant_get = 5;
-    NodecgMessageSend nodecg_message = 6;
-    OBSSceneTransition obs_scene_transition = 7;
+    ConnClose conn_termination = 4;
+    NodecgReplicantSet nodecg_replicant_set = 11;
+    NodecgReplicantGet nodecg_replicant_get = 12;
+    NodecgMessageSend nodecg_message = 13;
+    OBSSceneTransition obs_scene_transition = 14;
   }
 }
 
@@ -19,6 +20,11 @@ message Welcome {
 }
 
 message Ping {
+}
+
+message ConnClose {
+  int32 status_code = 1;
+  string message = 2;
 }
 
 message NodecgReplicantSet {

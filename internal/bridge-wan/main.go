@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/gorilla/websocket"
+	uuid "github.com/nu7hatch/gouuid"
 	"github.com/thebiggame/bigbot/internal/config"
 	protodef "github.com/thebiggame/bigbot/proto"
 	"log/slog"
@@ -13,7 +14,6 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
-	"time"
 )
 
 type BridgeWAN struct {
@@ -25,9 +25,11 @@ type BridgeWAN struct {
 	// The authentication key to test WS connections against.
 	wsKey string
 
-	// Active wvent websocket connection.
+	// Active event websocket connection.
+	// Potentially nil if the event is not connected - do EventAvailable() on the bridge to determine status.
 	wsConn *websocket.Conn
 
+	// Stores response handlers for given request IDs. (the mutex MUST be held to interact with this map)
 	wsResponseCh  map[string]chan *protodef.RPCResponse
 	wsResponseMtx sync.Mutex
 }
@@ -38,8 +40,13 @@ var logger = slog.New(slog.NewTextHandler(os.Stdout, nil))
 var EventBridge *BridgeWAN
 
 func generateRequestID() string {
-	// Generate a unique ID (use UUIDs in production)
-	return time.Now().Format("20060102150405.000000000")
+	// Generate a unique request ID
+	id, err := uuid.NewV4()
+	if err != nil {
+		// This should never happen.
+		panic(err)
+	}
+	return id.String()
 }
 
 func BridgeIsAvailable() (up bool) {
