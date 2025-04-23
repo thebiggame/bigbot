@@ -2,8 +2,8 @@ package avcomms
 
 import (
 	"context"
+	"errors"
 	"github.com/andreykaipov/goobs"
-	"github.com/gorilla/websocket"
 	"github.com/thebiggame/bigbot/internal/log"
 	"log/slog"
 	"sync"
@@ -35,7 +35,7 @@ func SetPassword(pw string) {
 }
 
 func goobsConnect() (err error) {
-	if GoobsIsConnected() {
+	if !GoobsIsConnected() {
 		// GOOBS not available, connect.
 		OBSMtx.Lock()
 
@@ -67,17 +67,21 @@ func goobsDisconnect() (err error) {
 	return nil
 }
 
-func GoobsIsConnected() bool {
+func testGoobsConnection() (err error) {
 	OBSMtx.RLock()
 	defer OBSMtx.RUnlock()
 	if OBS == nil {
-		return false
+		return errors.New("OBS connection not initialised")
 	}
-	_, err := OBS.General.GetVersion()
-	if websocket.IsCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-		return false
+	_, err = OBS.General.GetVersion()
+	if err != nil {
+		return err
 	}
-	return err == nil
+	return err
+}
+
+func GoobsIsConnected() bool {
+	return testGoobsConnection() == nil
 }
 
 // OBSDaemon is responsible for watching the GOOBS connection on a regular basis and
@@ -97,8 +101,12 @@ func OBSDaemon(ctx context.Context) {
 				err = goobsConnect()
 				if err != nil {
 					logger.Error("Failed to reconnect", slog.Any("error", err))
-				} else {
-					logger.Info("Reconnected to OBS successfully")
+					continue
+				}
+				err = testGoobsConnection()
+				if err != nil {
+					logger.Error("Failed to reconnect", slog.Any("error", err))
+					continue
 				}
 			}
 		case <-ctx.Done():
