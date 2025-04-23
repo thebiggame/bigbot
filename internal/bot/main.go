@@ -40,7 +40,7 @@ type BigBot struct {
 
 func New() (*BigBot, error) {
 	// get base discord session
-	DiscordSession, err := discordgo.New("Bot " + config.RuntimeConfig.Discord.Token)
+	DiscordSession, err := discordgo.New("Bot " + string(config.RuntimeConfig.Discord.Token))
 	if err != nil {
 		return nil, fmt.Errorf("error creating Discord session: %w", err)
 	}

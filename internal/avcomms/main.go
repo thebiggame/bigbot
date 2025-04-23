@@ -3,7 +3,6 @@
 package avcomms
 
 import (
-	"github.com/thebiggame/bigbot/internal/config"
 	"github.com/thebiggame/bigbot/pkg/nodecg"
 	"log/slog"
 	"os"
@@ -14,16 +13,6 @@ var logger = slog.New(slog.NewTextHandler(os.Stdout, nil))
 
 func SetLogger(log *slog.Logger) {
 	logger = log
-}
-
-func InitOld() (err error) {
-	if isInitialised {
-		return
-	}
-	NodeCG = nodecg.New(config.RuntimeConfig.AV.NodeCG.Hostname).WithKey(config.RuntimeConfig.AV.NodeCG.AuthenticationKey)
-
-	isInitialised = true
-	return
 }
 
 func Init(hostname, key string) (err error) {

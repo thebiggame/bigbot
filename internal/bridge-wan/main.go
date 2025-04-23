@@ -52,7 +52,7 @@ func BridgeIsAvailable() (up bool) {
 func New() (bridge *BridgeWAN, err error) {
 	bridge = &BridgeWAN{
 		httpServer:   &http.Server{Addr: config.RuntimeConfig.Bridge.Address},
-		wsKey:        config.RuntimeConfig.Bridge.Key,
+		wsKey:        string(config.RuntimeConfig.Bridge.Key),
 		wsResponseCh: make(map[string]chan *protodef.RPCResponse),
 	}
 	EventBridge = bridge

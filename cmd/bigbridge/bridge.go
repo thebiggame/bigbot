@@ -2,13 +2,14 @@ package main
 
 import (
 	bridge_lan "github.com/thebiggame/bigbot/internal/bridge-lan"
+	"github.com/thebiggame/bigbot/internal/config"
 	log2 "github.com/thebiggame/bigbot/internal/log"
 	"strings"
 )
 
 type RunCmd struct {
 	// Embed main app config (will be set during run)
-	Config bridge_lan.Config `embed:"" envprefix:"BIGBRIDGE_"`
+	Config config.BridgeConfig `embed:"" envprefix:"BIGBRIDGE_"`
 }
 
 func (cmd *RunCmd) Run(globals *Globals) error {

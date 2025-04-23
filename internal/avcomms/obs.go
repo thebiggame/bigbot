@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/andreykaipov/goobs"
 	"github.com/gorilla/websocket"
-	"github.com/thebiggame/bigbot/internal/config"
 	"github.com/thebiggame/bigbot/internal/log"
 	"log/slog"
 	"sync"
@@ -20,7 +19,20 @@ var (
 
 	// OBSMtx MUST be held before using OBS.
 	OBSMtx sync.RWMutex
+
+	// obsHost stores the configured OBS hostname to connect to.
+	obsHost string
+	// obsPass stores the password to connect to OBS with.
+	obsPass string
 )
+
+func SetHostname(host string) {
+	obsHost = host
+}
+
+func SetPassword(pw string) {
+	obsPass = pw
+}
 
 func goobsConnect() (err error) {
 	if GoobsIsConnected() {
@@ -29,7 +41,7 @@ func goobsConnect() (err error) {
 
 		var err error
 		// goobs.WithLogger(config.Logger) (need a secondary logger to not pollute everything)
-		OBS, err = goobs.New(config.RuntimeConfig.AV.OBS.Hostname, goobs.WithPassword(config.RuntimeConfig.AV.OBS.Password), goobs.WithLogger(slog.NewLogLogger(log.Logger.Handler(), log.LevelTrace)))
+		OBS, err = goobs.New(obsHost, goobs.WithPassword(obsPass), goobs.WithLogger(slog.NewLogLogger(log.Logger.Handler(), log.LevelTrace)))
 		// Not deferred as we need this back immediately.
 		OBSMtx.Unlock()
 		if err != nil {

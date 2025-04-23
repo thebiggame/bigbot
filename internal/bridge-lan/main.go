@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/gorilla/websocket"
 	"github.com/thebiggame/bigbot/internal/avcomms"
+	"github.com/thebiggame/bigbot/internal/config"
 	"github.com/thebiggame/bigbot/internal/log"
 	protodef "github.com/thebiggame/bigbot/proto"
 	"golang.org/x/sync/errgroup"
@@ -15,22 +16,6 @@ import (
 	"syscall"
 	"time"
 )
-
-type Config struct {
-	WsAddress string `long:"addr" description:"BIGbot address and port" default:"ws://localhost:8080/ws" env:"ADDR"`
-	Key       string `long:"key" description:"BIGbot authentication key" required:"" env:"KEY"`
-	AV        struct {
-		OBS struct {
-			Hostname string `long:"host" help:"OBS Host" default:"" env:"HOST"`
-			Password string `long:"password" help:"OBS password" default:"" env:"PASSWORD"`
-		} `prefix:"obs." embed:"" envprefix:"OBS_"`
-		NodeCG struct {
-			Hostname          string `long:"host" help:"NodeCG Host" default:"" env:"HOST"`
-			BundleName        string `long:"bundle" help:"NodeCG bundle name" default:"thebiggame" env:"BUNDLE"`
-			AuthenticationKey string `long:"key" help:"Authentication key" default:"" env:"AUTHKEY"`
-		} `prefix:"nodecg." embed:"" envprefix:"NODECG_"`
-	} `prefix:"av." embed:"" envprefix:"AV_"`
-}
 
 // logger stores the module's logger instance.
 var logger = slog.New(slog.NewTextHandler(os.Stdout, nil)).With(slog.String("module", "bridge_lan"))
@@ -43,13 +28,13 @@ type BridgeLAN struct {
 	conn *websocket.Conn
 
 	// The app config.
-	config Config
+	config config.BridgeConfig
 
 	// Whether we are properly connected and authenticated with the WS server.
 	connected bool
 }
 
-func New(config *Config) (bridge *BridgeLAN, err error) {
+func New(config *config.BridgeConfig) (bridge *BridgeLAN, err error) {
 	bridge = &BridgeLAN{
 		config: *config,
 	}
@@ -78,7 +63,7 @@ func (bridge *BridgeLAN) doAuth() error {
 	event := &protodef.ClientEvent{
 		Event: &protodef.ClientEvent_Authenticate{
 			Authenticate: &protodef.Authenticate{
-				Key: bridge.config.Key,
+				Key: string(bridge.config.Key),
 			},
 		},
 	}
@@ -112,10 +97,12 @@ func (bridge *BridgeLAN) Start(ctx context.Context) (err error) {
 	}
 	g.Go(func() error {
 		avcomms.SetLogger(logger.With("module", "avcomms"))
-		err := avcomms.Init(bridge.config.AV.NodeCG.Hostname, bridge.config.AV.NodeCG.AuthenticationKey)
+		err := avcomms.Init(bridge.config.AV.NodeCG.Hostname, string(bridge.config.AV.NodeCG.AuthenticationKey))
 		if err != nil {
 			return err
 		}
+		avcomms.SetHostname(bridge.config.AV.OBS.Hostname)
+		avcomms.SetPassword(string(bridge.config.AV.OBS.Password))
 		avcomms.OBSDaemon(bridgeCtx)
 		return nil
 	})
