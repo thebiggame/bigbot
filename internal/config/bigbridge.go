@@ -2,8 +2,8 @@ package config
 
 // BridgeConfig defines the configuration available to the bridge command.
 type BridgeConfig struct {
-	WsAddress string       `long:"addr" description:"BIGbot address and port" default:"ws://localhost:8080/ws" env:"ADDR"`
-	Key       SecretString `long:"key" description:"BIGbot authentication key" required:"" env:"KEY"`
+	WsAddress string       `long:"addr" help:"BIGbot address and port" default:"ws://localhost:8080/ws" env:"ADDR"`
+	Key       SecretString `long:"key" help:"BIGbot authentication key" required:"" env:"KEY"`
 	AV        struct {
 		OBS struct {
 			Hostname string       `long:"host" help:"OBS Host" default:"" env:"HOST"`

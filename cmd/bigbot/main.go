@@ -17,7 +17,7 @@ type Globals struct {
 type CLI struct {
 	Globals `envprefix:"BIGBOT_"`
 
-	Run    RunCmd    `cmd:"run" help:"Run BIGbot (."`
+	Run    RunCmd    `cmd:"run" help:"Run BIGbot (the main Discord bot)."`
 	Bridge BridgeCmd `cmd:"bridge" help:"Run BIGbridge (the event client)."`
 }
 
