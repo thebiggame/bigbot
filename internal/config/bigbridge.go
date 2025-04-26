@@ -1,6 +1,6 @@
 package config
 
-// Type BridgeConfig defines the configuration available to BIGbridge.
+// BridgeConfig defines the configuration available to the bridge command.
 type BridgeConfig struct {
 	WsAddress string       `long:"addr" description:"BIGbot address and port" default:"ws://localhost:8080/ws" env:"ADDR"`
 	Key       SecretString `long:"key" description:"BIGbot authentication key" required:"" env:"KEY"`
