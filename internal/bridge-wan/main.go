@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"github.com/gorilla/websocket"
 	uuid "github.com/nu7hatch/gouuid"
+	"github.com/thebiggame/bigbot/internal/bridge-wan/web"
 	"github.com/thebiggame/bigbot/internal/config"
 	protodef "github.com/thebiggame/bigbot/proto"
+	"html/template"
 	"log/slog"
 	"net/http"
 	"os"
@@ -91,6 +93,21 @@ func (mod *BridgeWAN) Start(ctx context.Context) (err error) {
 
 	mod.ctx = &ctx
 
+	tmpl, err := template.ParseFS(web.Templates, "*.html")
+	if err != nil {
+		return err
+	}
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		data := web.IndexPageData{
+			Version: config.AppVersion,
+		}
+		err := tmpl.ExecuteTemplate(w, "index.html", data)
+		if err != nil {
+			logger.Error("error rendering template", slog.Any("err", err))
+		}
+	})
+
+	// Websocket handler
 	http.HandleFunc("/ws", mod.wsHandle)
 	go func() {
 		logger.Info(fmt.Sprintf("BIGbridge SERVER listening at %v", mod.httpServer.Addr))
