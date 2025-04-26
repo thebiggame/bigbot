@@ -1,5 +1,5 @@
 # stage1 builds bigbot STATICALLY in a fatter development environment
-FROM golang:latest AS build
+FROM golang:1.24 AS build
 
 LABEL maintainer="duck. <me@duck.moe>"
 
