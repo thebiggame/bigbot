@@ -28,7 +28,8 @@ var (
 	ErrNodeCGUnknownError  = errors.New("unknown NodeCG error")
 	ErrNodeCGGeneralError  = errors.New("NodeCG error")
 
-	ErrNotBool = errors.New("non-boolean returned")
+	ErrNotBool   = errors.New("non-boolean returned")
+	ErrNotString = errors.New("non-string returned")
 )
 
 type NodeCGServer struct {
@@ -77,6 +78,21 @@ func (s *NodeCGServer) ReplicantGetBool(ctx context.Context, bundle, replicant s
 		return false, ErrNotBool
 	} else {
 		return reflect.ValueOf(rep).Bool(), nil
+	}
+}
+
+// ReplicantGetString is a shortcut to ReplicantGet for retrieving the current state of a Replicant,
+// where the content is a string value.
+func (s *NodeCGServer) ReplicantGetString(ctx context.Context, bundle, replicant string) (result string, err error) {
+	rep, err := s.ReplicantGet(ctx, bundle, replicant)
+	if err != nil {
+		return "", err
+	}
+	// test before returning (otherwise we panic)
+	if reflect.TypeOf(rep).Kind() != reflect.String {
+		return "", ErrNotString
+	} else {
+		return reflect.ValueOf(rep).String(), nil
 	}
 }
 

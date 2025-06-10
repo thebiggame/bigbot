@@ -142,6 +142,42 @@ func (bridge *BridgeLAN) Start(ctx context.Context) (err error) {
 						// Attempt graceful closure.
 						return bridge.conn.Close()
 					}
+				case *protodef.ServerEvent_Version:
+					logger.Debug("Version received")
+					verObs, verNcg, err := bridge.handleVersions()
+					var sCode int32
+					if err != nil {
+						logger.Error("handleNodeCGReplicantGet error", slog.Any("error", err))
+						sCode = 500
+					}
+					var errData string
+					if err != nil {
+						errData = err.Error()
+					}
+
+					response := &protodef.ClientEvent{
+						Event: &protodef.ClientEvent_RpcResponse{
+							RpcResponse: &protodef.RPCResponse{
+								RequestId:    event.RequestId,
+								StatusCode:   sCode,
+								ErrorMessage: errData,
+								Payload: &protodef.RPCResponse_Versions{
+									Versions: &protodef.VersionsResponse{
+										Obs: verObs,
+										Ncg: verNcg,
+									},
+								},
+							},
+						},
+					}
+					msg, err := proto.Marshal(response)
+					if err != nil {
+						logger.Error("marshalling error", slog.Any("error", err))
+					}
+					err = bridge.conn.WriteMessage(websocket.BinaryMessage, msg)
+					if err != nil {
+						logger.Error("write error", slog.Any("error", err))
+					}
 				case *protodef.ServerEvent_NodecgMessage:
 					{
 						logger.Debug("NodeCGMessage received")

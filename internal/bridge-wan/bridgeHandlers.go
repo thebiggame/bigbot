@@ -237,3 +237,57 @@ func (bridge *BridgeWAN) OBSSceneTransition(target, transition string) (err erro
 		return errors.New("RPC call timed out")
 	}
 }
+
+func (bridge *BridgeWAN) BrGetVersions() (obs, nodecg *string, err error) {
+	if EventBridge == nil {
+		return nil, nil, errors.New("EventBridge not initialised")
+	}
+	if EventBridge.wsConn == nil {
+		return nil, nil, errors.New("EventBridge not connected")
+	}
+
+	// Get an idempotency key for this request
+	requestID := generateRequestID()
+	// Create a channel to receive the response
+	responseCh := make(chan *proto.RPCResponse, 1)
+
+	// Store the channel in the responseCh map
+	bridge.wsResponseMtx.Lock()
+	bridge.wsResponseCh[requestID] = responseCh
+	bridge.wsResponseMtx.Unlock()
+
+	event := &proto.ServerEvent{
+		RequestId: requestID,
+		Event:     &proto.ServerEvent_Version{},
+	}
+	msg, err := proto2.Marshal(event)
+	if err != nil {
+		return nil, nil, err
+	}
+	err = EventBridge.wsConn.WriteMessage(websocket.BinaryMessage, msg)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Wait for the response or timeout
+	select {
+	case rpcResponse := <-responseCh:
+		// Handle server-side errors
+		if rpcResponse.StatusCode != 0 {
+			return nil, nil, errors.New(rpcResponse.ErrorMessage)
+		}
+		if rpcResponse.GetVersions() == nil {
+			return nil, nil, errors.New("RPC response not of type Versions")
+		}
+		versions := rpcResponse.GetVersions()
+		verObs := versions.GetObs()
+		verNcg := versions.GetNcg()
+		return &verObs, &verNcg, nil
+	case <-time.After(time.Second * 10):
+		// Clean up the channel on timeout
+		bridge.wsResponseMtx.Lock()
+		delete(bridge.wsResponseCh, requestID)
+		bridge.wsResponseMtx.Unlock()
+		return nil, nil, errors.New("RPC call timed out")
+	}
+}

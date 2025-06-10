@@ -8,6 +8,7 @@ message ServerEvent {
     Welcome welcome = 2;
     Ping ping = 3;
     ConnClose conn_termination = 4;
+    Versions version = 5;
     NodecgReplicantSet nodecg_replicant_set = 11;
     NodecgReplicantGet nodecg_replicant_get = 12;
     NodecgMessageSend nodecg_message = 13;
@@ -25,6 +26,9 @@ message Ping {
 message ConnClose {
   int32 status_code = 1;
   string message = 2;
+}
+
+message Versions {
 }
 
 message NodecgReplicantSet {
@@ -70,9 +74,15 @@ message RPCResponse {
   string error_message = 3;
   oneof payload {
     NodecgReplicantGetResponse ncg_replicant_get = 4;
+    VersionsResponse versions = 101;
   }
 }
 
 message NodecgReplicantGetResponse {
   bytes replicant = 1;
+}
+
+message VersionsResponse {
+  string obs = 1;
+  string ncg = 2;
 }

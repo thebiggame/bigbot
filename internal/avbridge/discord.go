@@ -1,6 +1,7 @@
 package avbridge
 
 import (
+	"fmt"
 	"github.com/bwmarrin/discordgo"
 	"github.com/thebiggame/bigbot/internal/avbridge/ngtbg"
 	bridge_wan "github.com/thebiggame/bigbot/internal/bridge-wan"
@@ -49,11 +50,13 @@ func (mod *AVBridge) DiscordHandleInteraction(s *discordgo.Session, i *discordgo
 
 		switch options[0].Name {
 		case "status":
-			if bridge_wan.BridgeIsAvailable() {
-				content = "🙆 Event Bridge is connected."
-			} else {
-				content = "🙅 Event Bridge is **not connected.**"
+			if !bridge_wan.BridgeIsAvailable() {
+				return true, helpers.DiscordInteractionEphemeralResponse(s, i, "👻 **Event Bridge is not available**")
 			}
+			if helpers.DiscordDeferEphemeralInteraction(s, i) != nil {
+				return true, err
+			}
+			return true, mod.discordCommandAVVersions(s, i)
 		case "ftb":
 			if !bridge_wan.BridgeIsAvailable() {
 				return true, helpers.DiscordInteractionEphemeralResponse(s, i, "👻 **Event Bridge is not available**")
@@ -91,6 +94,18 @@ func (mod *AVBridge) discordCommandAVFTB(s *discordgo.Session, i *discordgo.Inte
 
 	// Finally, confirm we did the thing.
 	_, err = helpers.DiscordInteractionFollowupMessage(s, i, "_Fading to black_...")
+	return err
+}
+
+func (mod *AVBridge) discordCommandAVVersions(s *discordgo.Session, i *discordgo.InteractionCreate) (err error) {
+	verObs, verNcg, err := bridge_wan.EventBridge.BrGetVersions()
+	if err != nil {
+		_, err = helpers.DiscordInteractionFollowupMessage(s, i, fmt.Sprintf("⚠️ unable to communicate with event backend: %s", err))
+		return err
+	}
+
+	// Return versions
+	_, err = helpers.DiscordInteractionFollowupMessage(s, i, fmt.Sprintf("🙆 **Event Bridge is connected.**\nOBS: %s\nNodeCG Bundle: %s", *verObs, *verNcg))
 	return err
 }
 
