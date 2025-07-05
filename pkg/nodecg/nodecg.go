@@ -63,7 +63,7 @@ type requestAuth struct {
 
 type requestReplicant struct {
 	requestAuth
-	Data interface{} `json:"data,omitempty"`
+	Data json.RawMessage `json:"data,omitempty"`
 }
 
 // ReplicantGetBool is a shortcut to ReplicantGet for retrieving the current state of a Replicant,
@@ -163,7 +163,7 @@ func (s *NodeCGServer) ReplicantGetDecode(ctx context.Context, bundle, replicant
 
 // ReplicantSet sets the current state of a remote Replicant.
 // value MUST be serialisable as JSON in some fashion.
-func (s *NodeCGServer) ReplicantSet(ctx context.Context, bundle string, replicant string, value interface{}) (err error) {
+func (s *NodeCGServer) ReplicantSet(ctx context.Context, bundle string, replicant string, value json.RawMessage) (err error) {
 	// Build URL.
 	url := s.Hostname + nodecgRestPrefix + nodecgReplicantPrefix + "/" + bundle + "/" + replicant
 
@@ -213,7 +213,7 @@ func (s *NodeCGServer) ReplicantSet(ctx context.Context, bundle string, replican
 
 // MessageSend sends a NodeCG message.
 // value is optional, but MUST be serialisable as JSON in some fashion.
-func (s *NodeCGServer) MessageSend(ctx context.Context, bundle, messageChannel string, value interface{}) (err error) {
+func (s *NodeCGServer) MessageSend(ctx context.Context, bundle, messageChannel string, value []byte) (err error) {
 	// Build URL.
 	url := s.Hostname + nodecgRestPrefix + nodecgMessagePrefix + "/" + bundle + "/" + messageChannel
 

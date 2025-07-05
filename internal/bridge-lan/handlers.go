@@ -10,7 +10,7 @@ import (
 )
 
 func (bridge *BridgeLAN) handleNodeCGMessageSend(event *proto.ServerEvent_NodecgMessage) error {
-	err := avcomms.NodeCG.ReplicantSet(*bridge.ctx, event.NodecgMessage.Namespace, event.NodecgMessage.Channel, event.NodecgMessage.Data)
+	err := avcomms.NodeCG.MessageSend(*bridge.ctx, event.NodecgMessage.Namespace, event.NodecgMessage.Channel, event.NodecgMessage.Data)
 	if err != nil {
 		return err
 	}

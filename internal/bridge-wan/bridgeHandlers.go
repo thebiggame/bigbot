@@ -163,7 +163,7 @@ func (bridge *BridgeWAN) BrMessageSend(bundle, channel string, value interface{}
 	if err != nil {
 		return err
 	}
-	err = EventBridge.wsConn.WriteMessage(websocket.BinaryMessage, msg)
+	err = EventBridge.wsConn.WriteMessage(websocket.TextMessage, msg)
 	if err != nil {
 		return err
 	}
